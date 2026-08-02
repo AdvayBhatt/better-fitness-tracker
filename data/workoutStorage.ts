@@ -28,6 +28,7 @@ export async function saveWorkout(
       STORAGE_KEY,
       JSON.stringify(workouts)
     );
+ 
 
   } catch(error){
 
@@ -47,12 +48,16 @@ export async function getWorkouts(): Promise<CompletedWorkout[]>{
   try {
 
     const existing =
-      await AsyncStorage.getItem(STORAGE_KEY);
+    await AsyncStorage.getItem(STORAGE_KEY);
 
 
-    return existing
-      ? JSON.parse(existing)
-      : [];
+    const workouts = existing
+    ? JSON.parse(existing)
+    : [];
+
+
+
+    return workouts;
 
 
   } catch(error){

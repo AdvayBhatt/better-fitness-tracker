@@ -9,6 +9,9 @@ import {
   StyleSheet,
 } from "react-native";
 
+import { Picker } from "@react-native-picker/picker";
+import { LineChart } from "react-native-gifted-charts";
+
 
 export default function ProgressScreen() {
 
@@ -16,20 +19,30 @@ export default function ProgressScreen() {
     useState<"table" | "graph">("table");
 
 
+  const [selectedExercise, setSelectedExercise] =
+    useState<string>("");
+
+
+  const [metric, setMetric] =
+    useState<
+      "weight" | "reps" | "volume" | "strength"
+    >("weight");
+  
+  const [selectedSplit, setSelectedSplit] =
+    useState<string>("All");
+
+
   const [workouts, setWorkouts] =
     useState<CompletedWorkout[]>([]);
 
 
 
- useEffect(()=>{
+  useEffect(()=>{
 
     async function loadWorkouts(){
 
       const savedWorkouts =
         await getWorkouts();
-
-
-
 
       setWorkouts(savedWorkouts);
 
@@ -56,6 +69,257 @@ export default function ProgressScreen() {
 
   }
 
+const filteredWorkouts =
+  selectedSplit === "All"
+    ? workouts
+    : workouts.filter(
+        workout =>
+          (workout.split ?? workout.workoutName)
+          === selectedSplit
+      );
+
+
+const filteredExerciseNames = Array.from(
+  new Set(
+    filteredWorkouts.flatMap(workout =>
+      workout.exercises.map(
+        exercise => exercise.exerciseName
+      )
+    )
+  )
+);
+
+
+const splitNames = Array.from(
+  new Set(
+    workouts.map(
+      workout =>
+        workout.split ?? workout.workoutName
+    )
+  )
+);
+
+
+  useEffect(()=>{
+
+  if(
+    filteredExerciseNames.length > 0 &&
+    !filteredExerciseNames.includes(selectedExercise)
+  ){
+    setSelectedExercise(filteredExerciseNames[0]);
+  }
+
+},[
+  filteredExerciseNames,
+  selectedExercise
+]);
+
+
+  const graphData = selectedExercise
+    ? [...filteredWorkouts]
+        .sort(
+          (a,b) =>
+            new Date(a.date).getTime() -
+            new Date(b.date).getTime()
+        )
+        .map(workout=>{
+
+          const exercise =
+            workout.exercises.find(
+              item =>
+                item.exerciseName === selectedExercise
+            );
+
+
+          if(!exercise){
+            return null;
+          }
+
+
+          const weights =
+            exercise.sets.map(set => set.weight);
+
+          const reps =
+            exercise.sets.map(set => set.reps);
+
+          const epleyValues =
+            exercise.sets.map(
+              set => set.weight * (1 + set.reps / 30)
+            );
+
+
+          const value =
+            metric === "weight"
+              ? weights.length > 0
+                ? Math.max(...weights)
+                : 0
+
+              : metric === "reps"
+              ? reps.length > 0
+                ? Math.max(...reps)
+                : 0
+
+              : metric === "volume"
+              ? exercise.sets.reduce(
+                  (total,set)=>
+                    total + (set.weight * set.reps),
+                  0
+                )
+
+              : epleyValues.length > 0
+              ? Math.max(...epleyValues)
+              : 0;
+
+
+          return {
+            date:
+              new Date(workout.date)
+              .toLocaleDateString(
+                undefined,
+                {
+                  month:"short",
+                  day:"numeric",
+                }
+              ),
+
+            value,
+          };
+
+
+        })
+        .filter(
+          (
+            item
+          ): item is {date:string; value:number} =>
+            item !== null
+        )
+
+    : [];
+
+
+    const exerciseStats = selectedExercise
+  ? [...filteredWorkouts]
+      .sort(
+        (a,b) =>
+          new Date(a.date).getTime() -
+          new Date(b.date).getTime()
+      )
+      .map(workout => {
+
+        const exercise =
+          workout.exercises.find(
+            item =>
+              item.exerciseName === selectedExercise
+          );
+
+        return exercise
+          ? {
+              date: workout.date,
+              sets: exercise.sets,
+            }
+          : null;
+
+      })
+      .filter(
+        (
+          item
+        ): item is {date:string; sets:any[]} =>
+          item !== null
+      )
+  : [];
+
+
+  const totalVolume =
+  exerciseStats.reduce(
+    (total, workout) =>
+      total +
+      workout.sets.reduce(
+        (sum,set)=>
+          sum + set.weight * set.reps,
+        0
+      ),
+    0
+  );
+
+
+const allWeights =
+  exerciseStats.flatMap(
+    workout =>
+      workout.sets.map(
+        set => set.weight
+      )
+  );
+
+
+const bestWeight =
+  allWeights.length > 0
+    ? Math.max(...allWeights)
+    : 0;
+
+
+const allEpleyValues =
+  exerciseStats.flatMap(
+    workout =>
+      workout.sets.map(
+        set =>
+          set.weight *
+          (1 + set.reps / 30)
+      )
+  );
+
+
+const bestEpley1RM =
+  allEpleyValues.length > 0
+    ? Math.max(...allEpleyValues)
+    : 0;
+
+
+const sessionCount =
+  exerciseStats.length;
+
+
+const lastTrained =
+  exerciseStats.length > 0
+    ? new Date(
+        exerciseStats[
+          exerciseStats.length - 1
+        ].date
+      ).toLocaleDateString()
+    : "";
+
+
+const metricUnit =
+  metric === "reps"
+    ? "reps"
+    : metric === "volume"
+    ? "lb-reps"
+    : "lbs";
+
+
+const currentMetricValue =
+  graphData.length > 0
+    ? graphData[graphData.length - 1].value
+    : null;
+
+
+const previousMetricValue =
+  graphData.length > 1
+    ? graphData[graphData.length - 2].value
+    : null;
+
+
+const trendPercent =
+  currentMetricValue !== null &&
+  previousMetricValue !== null &&
+  previousMetricValue !== 0
+    ? (
+        (currentMetricValue - previousMetricValue) /
+        previousMetricValue
+      ) * 100
+    : null;
+
+
+
 
 
   return (
@@ -63,174 +327,450 @@ export default function ProgressScreen() {
     <ThemedView style={styles.container}>
 
 
-      <ThemedText style={styles.title}>
-        Progress
-      </ThemedText>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+      >
 
 
-
-      <ThemedView style={styles.toggleContainer}>
-
-
-        <Pressable
-          style={[
-            styles.toggleButton,
-            view === "table" && styles.activeButton,
-          ]}
-          onPress={() => setView("table")}
-        >
-
-          <ThemedText style={styles.buttonText}>
-            Table
-          </ThemedText>
-
-        </Pressable>
-
-
-
-        <Pressable
-          style={[
-            styles.toggleButton,
-            view === "graph" && styles.activeButton,
-          ]}
-          onPress={() => setView("graph")}
-        >
-
-          <ThemedText style={styles.buttonText}>
-            Graph
-          </ThemedText>
-
-        </Pressable>
-
-
-      </ThemedView>
+        <ThemedText style={styles.title}>
+          Progress
+        </ThemedText>
 
 
 
 
-
-      {view === "table" ? (
-
-        <ScrollView>
+        <ThemedView style={styles.toggleContainer}>
 
 
-        {workouts.map((workout)=>(
-
-
-          <ThemedView
-            key={workout.id}
-            style={styles.card}
+          <Pressable
+            style={[
+              styles.toggleButton,
+              view === "table" &&
+              styles.activeButton,
+            ]}
+            onPress={()=>setView("table")}
           >
 
-
-            <ThemedText style={styles.header}>
-              {workout.workoutName}
+            <ThemedText style={styles.buttonText}>
+              Table
             </ThemedText>
 
+          </Pressable>
 
 
-            <ThemedText>
-              Date: {new Date(workout.date)
-                .toLocaleDateString()}
+
+          <Pressable
+            style={[
+              styles.toggleButton,
+              view === "graph" &&
+              styles.activeButton,
+            ]}
+            onPress={()=>setView("graph")}
+          >
+
+            <ThemedText style={styles.buttonText}>
+              Graph
             </ThemedText>
 
-
-
-            <ThemedText>
-              Duration: {formatTime(workout.duration)}
-            </ThemedText>
-
-
-
-
-
-            {workout.exercises.map((exercise)=>(
-
-
-              <ThemedView
-                key={exercise.exerciseName}
-                style={styles.exerciseCard}
-              >
-
-
-                <ThemedText style={styles.exerciseTitle}>
-                  {exercise.exerciseName}
-                </ThemedText>
-
-
-
-                <ThemedText>
-                  Weight: {exercise.sets[0]?.weight ?? 0} lbs
-                </ThemedText>
-
-
-
-                <ThemedText>
-                  Sets: {exercise.sets.length}
-                </ThemedText>
-
-
-
-                <ThemedText>
-                  Exercise Time: {formatTime(exercise.totalDuration)}
-                </ThemedText>
-
-
-
-                {exercise.sets.map((set,index)=>(
-
-
-                  <ThemedText key={index}>
-
-                    Set {index + 1}:{" "}
-                    {set.weight} lbs × {set.reps} reps{" "}
-                    ({formatTime(set.duration)})
-
-                  </ThemedText>
-
-
-                ))}
-
-
-
-              </ThemedView>
-
-
-            ))}
-
-
-
-          </ThemedView>
-
-
-        ))}
-
-
-        </ScrollView>
-
-
-
-      ) : (
-
-
-        <ThemedView style={styles.card}>
-
-
-          <ThemedText style={styles.header}>
-            Strength Progress
-          </ThemedText>
-
-
-          <ThemedText>
-            Graphs will appear here.
-          </ThemedText>
+          </Pressable>
 
 
         </ThemedView>
 
 
-      )}
 
+
+
+        {view === "table" && (
+
+          <>
+
+
+          {filteredWorkouts.map(workout=>(
+
+            <ThemedView
+              key={workout.id}
+              style={styles.card}
+            >
+
+
+              <ThemedText style={styles.header}>
+                {workout.workoutName}
+              </ThemedText>
+
+
+              <ThemedText>
+                Date:{" "}
+                {new Date(workout.date)
+                  .toLocaleDateString()}
+              </ThemedText>
+
+
+              <ThemedText>
+                Duration: {formatTime(workout.duration)}
+              </ThemedText>
+
+
+
+
+              {workout.exercises.map(exercise=>(
+
+
+                <ThemedView
+                  key={exercise.exerciseName}
+                  style={styles.exerciseCard}
+                >
+
+
+                  <ThemedText style={styles.exerciseTitle}>
+                    {exercise.exerciseName}
+                  </ThemedText>
+
+
+
+                  <ThemedText>
+                    Weight: {exercise.sets[0]?.weight ?? 0} lbs
+                  </ThemedText>
+
+
+                  <ThemedText>
+                    Sets: {exercise.sets.length}
+                  </ThemedText>
+
+
+                  <ThemedText>
+                    Exercise Time:
+                    {" "}
+                    {formatTime(exercise.totalDuration)}
+                  </ThemedText>
+
+
+
+                  {exercise.sets.map((set,index)=>(
+
+                    <ThemedText key={index}>
+
+                      Set {index+1}:{" "}
+                      {set.weight} lbs × {set.reps} reps
+                      {" "}
+                      ({formatTime(set.duration)})
+
+                    </ThemedText>
+
+                  ))}
+
+
+
+                </ThemedView>
+
+
+              ))}
+
+
+
+            </ThemedView>
+
+
+          ))}
+
+
+          </>
+
+        )}
+
+
+
+
+
+
+
+        {view === "graph" && (
+
+          <ThemedView style={styles.card}>
+
+
+            <ThemedText style={styles.header}>
+              {selectedExercise
+                ? `${selectedExercise} - ${
+                    metric === "weight"
+                      ? "Weight Progress"
+                      : metric === "reps"
+                      ? "Rep Progress"
+                      : metric === "volume"
+                      ? "Volume Progress"
+                      : "Estimated 1RM Progress"
+                  }`
+                : "Strength Progress"}
+            </ThemedText>
+
+
+
+            <ThemedText>
+              Split:
+            </ThemedText>
+
+          
+          <ThemedView style={styles.pickerWrapper}>
+
+            <Picker
+              style={styles.picker}
+              itemStyle={styles.pickerItem}
+              selectedValue={selectedSplit}
+              onValueChange={(value)=>{
+
+                setSelectedSplit(value);
+
+                const newFilteredWorkouts =
+                  value === "All"
+                    ? workouts
+                    : workouts.filter(
+                        workout =>
+                          (workout.split ?? workout.workoutName)
+                          === value
+                      );
+
+
+                const firstExercise =
+                  Array.from(
+                    new Set(
+                      newFilteredWorkouts.flatMap(workout =>
+                        workout.exercises.map(
+                          exercise => exercise.exerciseName
+                        )
+                      )
+                    )
+                  )[0];
+
+                setSelectedExercise(firstExercise ?? "");
+
+                setMetric("weight");
+
+              }}
+            >
+              <Picker.Item
+                label="All"
+                value="All"
+              />
+
+              {splitNames.map(split => (
+
+                <Picker.Item
+                  key={split}
+                  label={split}
+                  value={split}
+                />
+
+              ))}
+
+            </Picker>
+           </ThemedView>
+
+
+
+            <ThemedText>
+              Exercise:
+            </ThemedText>
+
+        <ThemedView style={styles.pickerWrapper}>
+
+            <Picker
+              style={styles.picker}
+              itemStyle={styles.pickerItem}
+              selectedValue={selectedExercise}
+              onValueChange={(value)=>
+                setSelectedExercise(value)
+              }
+            >
+
+              {filteredExerciseNames.map(name => (
+
+                <Picker.Item
+                  key={name}
+                  label={name}
+                  value={name}
+                />
+
+              ))}
+
+            </Picker>
+          </ThemedView>
+
+
+            <ThemedText>
+              Metric:
+            </ThemedText>
+
+          <ThemedView style={styles.pickerWrapper}>
+            <Picker
+              style={styles.picker}
+              itemStyle={styles.pickerItem}
+              selectedValue={metric}
+              onValueChange={(value)=>
+                setMetric(value)
+              }
+            >
+
+              <Picker.Item
+                label="Weight"
+                value="weight"
+              />
+
+              <Picker.Item
+                label="Reps"
+                value="reps"
+              />
+
+              <Picker.Item
+                label="Volume"
+                value="volume"
+              />
+
+              <Picker.Item
+                label="Estimated 1RM"
+                value="strength"
+              />
+
+            </Picker>
+
+          </ThemedView>
+
+
+
+
+            {selectedExercise &&
+              graphData.length > 0 && (
+
+                <>
+                  <ThemedView style={styles.statsCard}>
+
+                    <ThemedText>
+                      Sessions: {sessionCount}
+                    </ThemedText>
+
+                    <ThemedText>
+                      Top Weight: {bestWeight} lbs
+                    </ThemedText>
+
+                    <ThemedText>
+                      Estimated 1RM: {Math.round(bestEpley1RM)} lbs
+                    </ThemedText>
+
+                    <ThemedText>
+                      Total Volume: {Math.round(totalVolume).toLocaleString()} lb-reps
+                    </ThemedText>
+
+                    <ThemedText>
+                      Last Trained: {lastTrained}
+                    </ThemedText>
+
+                    {trendPercent !== null &&
+                      metric !== "volume" && (
+
+                      <ThemedText>
+                        Last session: {Math.round(currentMetricValue!)} {metricUnit}
+                        {"  "}Previous: {Math.round(previousMetricValue!)} {metricUnit}
+                        {"  "}Change: {trendPercent >= 0 ? "+" : ""}
+                        {trendPercent.toFixed(1)}%
+                      </ThemedText>
+
+                    )}
+
+                  </ThemedView>
+
+
+                  <ThemedView style={styles.chartContainer}>
+
+                    <LineChart
+                      data={
+                        graphData.map(item => ({
+                          value: item.value,
+                          label: item.date,
+                        }))
+                      }
+
+                      height={240}
+                      width={340}
+
+                      yAxisLabelWidth={50}
+                      spacing={80}
+
+                      thickness={3}
+
+                      color="#0a7ea4"
+                      dataPointsColor="#0a7ea4"
+
+                      curved
+                      areaChart
+
+                      startFillColor="#0a7ea4"
+                      endFillColor="#0a7ea4"
+
+                      startOpacity={0.3}
+                      endOpacity={0.05}
+
+                      hideRules={false}
+
+                      yAxisLabelSuffix={
+                        metric === "reps"
+                          ? " reps"
+                          : metric === "volume"
+                          ? " lb-reps"
+                          : " lbs"
+                      }
+
+                      yAxisTextStyle={{
+                        color:"#777",
+                      }}
+
+                      xAxisLabelTextStyle={{
+                        color:"#777",
+                        fontSize:10,
+                      }}
+
+                      noOfSections={5}
+
+                      maxValue={
+                        graphData.length > 0
+                          ? Math.ceil(
+                              Math.max(
+                                ...graphData.map(
+                                  item => item.value
+                                )
+                              ) / 5
+                            ) * 5
+                          : 10
+                      }
+
+                      showDataPointLabelOnFocus
+
+                    />
+
+                  </ThemedView>
+
+                </>
+
+            )}
+
+          
+
+            {selectedExercise &&
+                graphData.length === 0 && (
+
+                  <ThemedText style={styles.emptyState}>
+                    No progress data for this exercise yet.
+                  </ThemedText>
+
+            )}
+            
+
+
+          </ThemedView>
+
+        )}
+
+
+
+      </ScrollView>
 
 
     </ThemedView>
@@ -242,25 +782,29 @@ export default function ProgressScreen() {
 
 
 
-
 const styles = StyleSheet.create({
-
 
   container:{
     flex:1,
     padding:20,
-    gap:20,
+  },
+
+
+  scrollContent:{
+    paddingBottom:40,
   },
 
 
   title:{
     fontSize:28,
+    marginBottom:20,
   },
 
 
   toggleContainer:{
     flexDirection:"row",
     gap:10,
+    marginBottom:20,
   },
 
 
@@ -283,23 +827,42 @@ const styles = StyleSheet.create({
 
 
   card:{
-    padding:20,
-    borderRadius:12,
-    gap:10,
-    marginBottom:20,
-  },
+  padding:15,
+  borderRadius:12,
+  marginBottom:20,
+},
 
 
   header:{
     fontSize:20,
     fontWeight:"bold",
+    marginBottom:10,
   },
+
+ picker:{
+  height:100,
+  color:"#fff",
+},
+
+pickerItem:{
+  height:100,
+  fontSize:16,
+  color:"#fff",
+},
+
+pickerWrapper:{
+  backgroundColor:"#333",
+  borderRadius:8,
+  marginBottom:12,
+  height:100,
+  overflow:"hidden",
+  justifyContent:"center",
+},
 
 
   exerciseCard:{
     padding:15,
     borderRadius:10,
-    gap:5,
     marginTop:15,
   },
 
@@ -307,7 +870,31 @@ const styles = StyleSheet.create({
   exerciseTitle:{
     fontSize:18,
     fontWeight:"bold",
+    marginBottom:5,
   },
+
+
+  emptyState:{
+    marginTop:10,
+    color:"#777",
+    textAlign:"center",
+  },
+
+
+
+
+  chartContainer:{
+    marginTop:20,
+    width:"100%",
+    alignItems:"center",
+  },
+
+  statsCard:{
+    padding:12,
+    borderRadius:10,
+    marginBottom:15,
+    backgroundColor:"#222",
+  }
 
 
 });

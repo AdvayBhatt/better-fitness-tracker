@@ -11,6 +11,7 @@ export type CompletedExercise = {
 export type CompletedWorkout = {
   id: string;
   workoutName: string;
+  split?: string;
   date: string;
   duration: number;
   exercises: CompletedExercise[];

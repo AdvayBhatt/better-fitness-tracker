@@ -465,11 +465,13 @@ export default function WorkoutSession() {
 
               await saveWorkout({
 
-                id:Date.now().toString(),
+                id: Date.now().toString(),
 
-                workoutName:currentWorkout.name,
+                workoutName: currentWorkout.name,
 
-                date:new Date().toISOString(),
+                split: currentWorkout.name,
+
+                date: new Date().toISOString(),
 
                 duration: totalWorkoutDuration,
 
@@ -483,10 +485,6 @@ export default function WorkoutSession() {
                 ]
 
               });
-              console.log(
-                "SAVED WORKOUTS:",
-                JSON.stringify(workouts,null,2)
-              );
 
 
               setShowCompleteModal(true);
