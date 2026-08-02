@@ -18,17 +18,19 @@ import {
 
 import { saveWorkout } from "@/data/workoutStorage";
 
+import {
+    CompletedWorkout,
+} from "@/data/workoutHistory";
+
 
 type WorkoutSessionContextType = {
   activeWorkout: ActiveWorkoutSession | null;
 
+  loadingActiveWorkout: boolean;
+
   sessionWorkout: any;
 
   currentExerciseIndex: number;
-
-  setCurrentExerciseIndex: React.Dispatch<
-  React.SetStateAction<number>
->;
 
   startWorkout: (workout: any) => Promise<void>;
 
@@ -36,20 +38,21 @@ type WorkoutSessionContextType = {
     exerciseIndex: number,
     setIndex: number,
     updates: {
-        weight?: number;
-        reps?: number;
-        completed?: boolean;
-        duration?: number;
-        }
-  ) => void;
+      weight?: number;
+      reps?: number;
+      completed?: boolean;
+      duration?: number;
+    }
+  ) => ActiveWorkoutSession | null;
 
   updateTimer: (
-  updates: {
-    elapsedSeconds?: number;
-    currentExerciseDuration?: number;
-    currentSetDuration?: number;
-  }
-) => void;
+    updates: {
+      elapsedSeconds?: number;
+      currentExerciseDuration?: number;
+      currentSetDuration?: number;
+      currentExerciseIndex?: number;
+    }
+  ) => void;
 
   finishWorkout: () => Promise<void>;
 
@@ -62,20 +65,24 @@ const WorkoutSessionContext =
 
 
 
+
+
 export function WorkoutSessionProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
 
-  const [activeWorkout, setActiveWorkout] =
-    useState<ActiveWorkoutSession | null>(null);
 
+const [activeWorkout, setActiveWorkout] =
+  useState<ActiveWorkoutSession | null>(null);
 
-  const [
-    currentExerciseIndex,
-    setCurrentExerciseIndex,
-  ] = useState(0);
+const [loadingActiveWorkout, setLoadingActiveWorkout] =
+  useState(true);
+
+const currentExerciseIndex =
+  activeWorkout?.currentExerciseIndex ?? 0;
+  
 
 
 
@@ -119,24 +126,23 @@ export function WorkoutSessionProvider({
 
   useEffect(() => {
 
-    async function loadWorkout() {
+  async function loadWorkout() {
 
-      const saved =
-        await getActiveWorkout();
+    const saved =
+      await getActiveWorkout();
 
-
-      if (saved) {
-
-        setActiveWorkout(saved);
-
-      }
-
+    if (saved) {
+    setActiveWorkout(saved);
     }
 
+    setLoadingActiveWorkout(false);
 
-    loadWorkout();
+  }
 
-  }, []);
+
+  loadWorkout();
+
+}, []);
 
 
 
@@ -145,6 +151,8 @@ export function WorkoutSessionProvider({
 
    const session: ActiveWorkoutSession = {
         id: Date.now().toString(),
+
+        currentExerciseIndex: 0,
 
         workoutId: workout.id,
 
@@ -157,6 +165,8 @@ export function WorkoutSessionProvider({
         currentExerciseDuration: 0,
 
         currentSetDuration: 0,
+
+        
 
       exercises:
         workout.exercises.map(
@@ -177,26 +187,39 @@ export function WorkoutSessionProvider({
             type:
               exercise.type,
 
+            time:
+            exercise.time,
+
+            miles:
+            exercise.miles,
+
+            resistance:
+            exercise.resistance,
+
+            incline:
+            exercise.incline,
+
             sets:
-                Array.from(
-                    {
-                    length:
-                        exercise.sets ?? 1,
-                    },
-                    () => ({
-                    weight:
-                        exercise.weight,
+                exercise.type === "strength"
 
-                    reps:
-                        exercise.reps,
+                    ? Array.from(
+                        {
+                        length: exercise.sets,
+                        },
+                        () => ({
+                        weight: exercise.weight,
+                        reps: exercise.reps,
+                        completed:false,
+                        duration:0,
+                        })
+                    )
 
-                    completed:
-                        false,
-
-                    duration:
-                        0,
-                    })
-                ),
+                    : [
+                        {
+                        completed:false,
+                        duration:0,
+                        }
+                    ],
 
           })
         ),
@@ -204,7 +227,6 @@ export function WorkoutSessionProvider({
     };
 
 
-    setCurrentExerciseIndex(0);
 
     setActiveWorkout(session);
 
@@ -215,76 +237,72 @@ export function WorkoutSessionProvider({
 
 
 
-  function updateSet(
-    exerciseIndex: number,
-    setIndex: number,
-    updates: {
-        weight?: number;
-        reps?: number;
-        completed?: boolean;
-        duration?: number;
-        }
-  ) 
-  
-  
-  {
-
-    if (!activeWorkout) return;
-
-
-    const updated: ActiveWorkoutSession = {
-
-      ...activeWorkout,
-
-      exercises:
-        activeWorkout.exercises.map(
-          (exercise, eIndex) => {
-
-            if (eIndex !== exerciseIndex) {
-              return exercise;
-            }
-
-
-            return {
-
-              ...exercise,
-
-              sets:
-                exercise.sets.map(
-                  (set, sIndex) => {
-
-                    if (sIndex !== setIndex) {
-                      return set;
-                    }
-
-
-                    return {
-                      ...set,
-                      ...updates,
-                    };
-
-                  }
-                ),
-
-            };
-
-          }
-        ),
-
-    };
-
-
-    setActiveWorkout(updated);
-
-    saveActiveWorkout(updated);
-
+ function updateSet(
+  exerciseIndex: number,
+  setIndex: number,
+  updates: {
+      weight?: number;
+      reps?: number;
+      completed?: boolean;
+      duration?: number;
   }
+) {
+
+  if (!activeWorkout) return null;
+
+
+  const updated: ActiveWorkoutSession = {
+    ...activeWorkout,
+
+    exercises:
+      activeWorkout.exercises.map(
+        (exercise, eIndex) => {
+
+          if (eIndex !== exerciseIndex) {
+            return exercise;
+          }
+
+
+          return {
+            ...exercise,
+
+            sets:
+              exercise.sets.map(
+                (set, sIndex) => {
+
+                  if (sIndex !== setIndex) {
+                    return set;
+                  }
+
+                  return {
+                    ...set,
+                    ...updates,
+                  };
+
+                }
+              ),
+
+          };
+
+        }
+      ),
+
+  };
+
+
+  setActiveWorkout(updated);
+
+  saveActiveWorkout(updated);
+
+  return updated;
+}
 
 function updateTimer(
   updates: {
     elapsedSeconds?: number;
     currentExerciseDuration?: number;
     currentSetDuration?: number;
+    currentExerciseIndex?: number;
   }
 ) {
 
@@ -316,62 +334,75 @@ function updateTimer(
 
 
 
-    const completedWorkout = {
+   const completedWorkout: CompletedWorkout = {
 
-      id:
-        activeWorkout.id,
+  
+  id: activeWorkout.id,
 
-      workoutName:
-        activeWorkout.workoutName,
+  workoutId: activeWorkout.workoutId,
 
-      date:
-        new Date().toISOString(),
+  workoutName: activeWorkout.workoutName,
 
-      duration:
-        Math.floor(
-          (Date.now() -
-            activeWorkout.startTime) /
-            60000
-        ),
+  date: new Date().toISOString(),
+
+  duration: activeWorkout.elapsedSeconds,
 
 
-      exercises:
-        activeWorkout.exercises.map(
-          exercise => ({
+  exercises:
 
-            exerciseName:
-              exercise.name,
+  activeWorkout.exercises.map(
+    exercise => ({
 
-            category:
-              exercise.category,
+      exerciseName:
+        exercise.name,
 
+      category:
+        exercise.category,
 
-            sets:
-              exercise.sets
-                .filter(
-                  set => set.completed
-                )
-                .map(
-                  set => ({
-                    weight:
-                      set.weight ?? 0,
+      type:
+        exercise.type,
 
-                    reps:
-                      set.reps ?? 0,
+      time: exercise.time,
 
-                    duration:
-                      0,
-                  })
-                ),
+        miles: exercise.miles,
 
+        resistance: exercise.resistance,
 
-            totalDuration:
-              0,
+        incline: exercise.incline,
 
-          })
-        ),
+      totalDuration:
+        exercise.sets
+          .filter(
+            set => set.completed
+          )
+          .reduce(
+            (sum, set) =>
+              sum + set.duration,
+            0
+          ),
 
-    };
+      sets:
+        exercise.sets
+          .filter(
+            set => set.completed
+          )
+          .map(
+            set => ({
+              weight:
+                set.weight ?? 0,
+
+              reps:
+                set.reps ?? 0,
+
+              duration:
+                set.duration,
+            })
+          ),
+
+    })
+  ),
+
+};
 
 
 
@@ -381,8 +412,6 @@ function updateTimer(
 
 
     setActiveWorkout(null);
-
-    setCurrentExerciseIndex(0);
 
     await clearActiveWorkout();
 
@@ -394,13 +423,11 @@ function updateTimer(
 
   async function cancelWorkout() {
 
-    setActiveWorkout(null);
+  setActiveWorkout(null);
 
-    setCurrentExerciseIndex(0);
+  await clearActiveWorkout();
 
-    await clearActiveWorkout();
-
-  }
+}
 
 
 
@@ -418,9 +445,10 @@ function updateTimer(
 
     currentExerciseIndex,
 
-    setCurrentExerciseIndex,
-
     startWorkout,
+
+    loadingActiveWorkout,
+
 
     updateSet,
 

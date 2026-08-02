@@ -1,4 +1,4 @@
-import { ActiveWorkoutSession } from "@/types/exercise";
+import { ActiveWorkoutSession } from "@/types/workoutSession";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ACTIVE_WORKOUT_KEY = "activeWorkoutSession";

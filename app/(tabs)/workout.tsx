@@ -1,10 +1,13 @@
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { ScreenContainer } from "@/components/screen-container";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors } from "@/constants/theme";
 import { useTheme } from "@/context/ThemeContext";
 import { useWorkouts } from "@/context/WorkoutContext";
+import { useWorkoutSession } from "@/context/WorkoutSessionContext";
 import { router } from "expo-router";
+import { useState } from "react";
 import { Pressable, StyleSheet } from "react-native";
 
 function generateId() {
@@ -22,7 +25,17 @@ export default function WorkoutScreen() {
     deleteWorkout,
   } = useWorkouts();
 
+  const { 
+    activeWorkout,
+    cancelWorkout,
+  } = useWorkoutSession();
+  
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  const resumeExercise =
+  activeWorkout?.exercises[
+    activeWorkout.currentExerciseIndex
+  ];
 
   return (
     <ScreenContainer>
@@ -33,7 +46,59 @@ export default function WorkoutScreen() {
           Workout
         </ThemedText>
 
+        {activeWorkout && (
 
+  <ThemedView
+    style={[
+      styles.innerCard,
+      {
+        backgroundColor:
+          Colors[colorScheme].card,
+      },
+    ]}
+  >
+
+    <ThemedText style={styles.workoutName}>
+      Resume {activeWorkout.workoutName}
+    </ThemedText>
+
+    <ThemedText style={styles.subtitle}>
+      Current: {resumeExercise?.name}
+    </ThemedText>
+
+    <ThemedText style={styles.subtitle}>
+      Time: {Math.floor(activeWorkout.elapsedSeconds / 60)}:
+      {(activeWorkout.elapsedSeconds % 60)
+        .toString()
+        .padStart(2,"0")}
+    </ThemedText>
+
+
+    <Pressable
+      style={[
+        styles.addButton,
+        {
+          backgroundColor:
+            Colors[colorScheme].tint,
+        },
+      ]}
+      onPress={() => {
+
+        router.push("/workout/session");
+
+      }}
+    >
+
+      <ThemedText style={styles.addButtonText}>
+        Resume Workout
+      </ThemedText>
+
+    </Pressable>
+
+
+  </ThemedView>
+
+)}
 
         {workouts.map((workout) => (
 
@@ -109,7 +174,7 @@ export default function WorkoutScreen() {
 
                       e.stopPropagation();
 
-                      deleteWorkout(workout.id);
+                      setDeleteId(workout.id);
 
                     }}
                   >
@@ -191,6 +256,37 @@ export default function WorkoutScreen() {
 
 
       </ThemedView>
+
+      <ConfirmModal
+        visible={deleteId !== null}
+
+        title="Delete Workout?"
+
+        message="This split and its exercises will be permanently removed."
+
+        confirmText="Delete"
+
+        onConfirm={async () => {
+
+          if (!deleteId) return;
+
+          if (
+            activeWorkout &&
+            activeWorkout.workoutId === deleteId
+          ) {
+            await cancelWorkout();
+          }
+
+          deleteWorkout(deleteId);
+
+          setDeleteId(null);
+
+        }}
+
+        onCancel={() => {
+          setDeleteId(null);
+        }}
+      />
 
 
     </ScreenContainer>

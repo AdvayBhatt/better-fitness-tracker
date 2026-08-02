@@ -1,3 +1,4 @@
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useWorkouts } from "@/context/WorkoutContext";
@@ -24,24 +25,23 @@ export default function WorkoutSession() {
 
   const { workouts } = useWorkouts();
 
+  const [showCancelModal,setShowCancelModal] = useState(false);
+
 const {
   sessionWorkout,
   startWorkout,
   finishWorkout,
+  cancelWorkout,
   currentExerciseIndex,
-  setCurrentExerciseIndex,
   activeWorkout,
   updateSet,
+    loadingActiveWorkout,
+
   updateTimer,
 } = useWorkoutSession();
 
-
 const exerciseDuration =
   activeWorkout?.currentExerciseDuration ?? 0;
-
-
-const totalWorkoutDuration =
-  activeWorkout?.elapsedSeconds ?? 0;
 
 
 const currentSetDuration =
@@ -49,11 +49,12 @@ const currentSetDuration =
 
   const { colorScheme } = useTheme();
 
-  const workout =
-  sessionWorkout ??
-  workouts.find(
-    item => item.id === split
-  );
+const workout =
+  activeWorkout
+    ? sessionWorkout
+    : workouts.find(
+        item => item.id === split
+      );
 
 
   const [currentWeight,setCurrentWeight] =
@@ -69,18 +70,14 @@ const currentSetDuration =
     = useState(false);
 
 
-  const [hasStarted,setHasStarted]
-    = useState(false);
+const hasStarted = !!activeWorkout;
 
 
+const [isTimerRunning,setIsTimerRunning]
+  = useState(false);
 
-  const [isTimerRunning,setIsTimerRunning]
-    = useState(false);
-
-  const [isSetTimerRunning,setIsSetTimerRunning]
-  = useState(false); // current set timer
-
-
+const [isSetTimerRunning,setIsSetTimerRunning]
+  = useState(false);
 
   const foundExercise =
     workout?.exercises[currentExerciseIndex];
@@ -149,6 +146,15 @@ const currentSetDuration =
 ]);
 
 
+if (loadingActiveWorkout) {
+  return (
+    <ThemedView style={styles.safeArea}>
+      <ThemedText>
+        Loading workout...
+      </ThemedText>
+    </ThemedView>
+  );
+}
 
   if(!workout || !foundExercise){
 
@@ -191,18 +197,11 @@ const currentSetDuration =
 
 async function handleStartWorkout(){
 
-  console.log("START PRESSED");
-
   if (!workout) return;
 
   if (!activeWorkout) {
     await startWorkout(workout);
   }
-
-  console.log("AFTER START", activeWorkout);
-
-  setHasStarted(true);
-
   setIsTimerRunning(true);
 setIsSetTimerRunning(true);
 
@@ -247,8 +246,7 @@ function completeSet() {
     return;
   }
 
-
- updateSet(
+  updateSet(
   currentExerciseIndex,
   nextIncompleteSet,
   {
@@ -256,7 +254,6 @@ function completeSet() {
     duration: currentSetDuration,
   }
 );
-
 
   updateTimer({
     currentSetDuration: 0,
@@ -276,6 +273,7 @@ function completeSet() {
     <SafeAreaView style={styles.safeArea}>
 
     <ThemedView style={styles.screen}>
+
 
       <View style={styles.headerRow}>
 
@@ -335,7 +333,7 @@ function completeSet() {
 
 
 
-        {!hasStarted && (
+        {!activeWorkout && !hasStarted && (
 
           <Pressable
             style={[
@@ -505,13 +503,11 @@ function completeSet() {
                 currentWorkout.exercises.length - 1
               ){
 
-                setCurrentExerciseIndex(prev => prev + 1);
+                const next = currentExerciseIndex + 1;
 
                 updateTimer({
+                  currentExerciseIndex: next,
                   currentExerciseDuration: 0,
-                });
-
-                updateTimer({
                   currentSetDuration: 0,
                 });
 
@@ -553,6 +549,23 @@ function completeSet() {
         </>
 
         )}
+
+        <Pressable
+          style={[
+            styles.button,
+            {
+              backgroundColor:
+                Colors[colorScheme ?? "light"].tint,
+            },
+          ]}
+          onPress={() => {
+            setShowCancelModal(true);
+          }}
+        >
+          <ThemedText style={styles.buttonText}>
+            Cancel Workout
+          </ThemedText>
+        </Pressable>
 
       </ScrollView>
 
@@ -597,6 +610,26 @@ function completeSet() {
         </View>
 
       </Modal>
+
+      <ConfirmModal
+      visible={showCancelModal}
+
+      title="Discard Workout?"
+
+      message="All progress from this session will be lost."
+
+      confirmText="Discard"
+
+      onConfirm={async () => {
+        await cancelWorkout();
+        setShowCancelModal(false);
+        router.replace("/");
+      }}
+
+      onCancel={() => {
+        setShowCancelModal(false);
+      }}
+    />
 
 
     </ThemedView>

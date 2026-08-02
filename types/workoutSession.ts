@@ -1,7 +1,9 @@
 export type ActiveWorkoutSet = {
-  weight: number;
-  reps: number;
+  weight?: number;
+  reps?: number;
+
   completed: boolean;
+
   duration: number;
 };
 
@@ -18,6 +20,12 @@ export type ActiveWorkoutExercise = {
   type: "strength" | "cardio";
 
   sets: ActiveWorkoutSet[];
+
+  // cardio fields
+  time?: number;
+  miles?: number;
+  resistance?: number;
+  incline?: number;
 };
 
 
@@ -35,6 +43,8 @@ export type ActiveWorkoutSession = {
   currentExerciseDuration: number;
 
   currentSetDuration: number;
+
+  currentExerciseIndex: number;
 
   exercises: ActiveWorkoutExercise[];
 };
