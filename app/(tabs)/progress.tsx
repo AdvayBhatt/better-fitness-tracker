@@ -1,5 +1,8 @@
+import { ScreenContainer } from "@/components/screen-container";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Colors } from "@/constants/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { CompletedWorkout } from "@/data/workoutHistory";
 import { getWorkouts } from "@/data/workoutStorage";
 import { useEffect, useState } from "react";
@@ -17,6 +20,8 @@ export default function ProgressScreen() {
 
   const [view, setView] =
     useState<"table" | "graph">("table");
+
+  const { colorScheme } = useTheme();
 
 
   const [selectedExercise, setSelectedExercise] =
@@ -324,7 +329,7 @@ const trendPercent =
 
   return (
 
-    <ThemedView style={styles.container}>
+     <ScreenContainer>
 
 
       <ScrollView
@@ -339,22 +344,41 @@ const trendPercent =
 
 
 
-        <ThemedView style={styles.toggleContainer}>
+        <ThemedView
+          style={[
+            styles.toggleContainer,
+            {
+              backgroundColor: Colors[colorScheme].background,
+            },
+          ]}
+        >
 
 
           <Pressable
             style={[
               styles.toggleButton,
-              view === "table" &&
-              styles.activeButton,
+              {
+                backgroundColor:
+                  view === "table"
+                    ? Colors[colorScheme].tint
+                    : Colors[colorScheme].card,
+              },
             ]}
-            onPress={()=>setView("table")}
+            onPress={() => setView("table")}
           >
-
-            <ThemedText style={styles.buttonText}>
+            <ThemedText
+              style={[
+                styles.buttonText,
+                {
+                  color:
+                    view === "table"
+                      ? Colors[colorScheme].background
+                      : Colors[colorScheme].text,
+                },
+              ]}
+            >
               Table
             </ThemedText>
-
           </Pressable>
 
 
@@ -362,16 +386,28 @@ const trendPercent =
           <Pressable
             style={[
               styles.toggleButton,
-              view === "graph" &&
-              styles.activeButton,
+              {
+                backgroundColor:
+                  view === "graph"
+                    ? Colors[colorScheme].tint
+                    : Colors[colorScheme].card,
+              },
             ]}
-            onPress={()=>setView("graph")}
+            onPress={() => setView("graph")}
           >
-
-            <ThemedText style={styles.buttonText}>
+            <ThemedText
+              style={[
+                styles.buttonText,
+                {
+                  color:
+                    view === "graph"
+                      ? Colors[colorScheme].background
+                      : Colors[colorScheme].text,
+                },
+              ]}
+            >
               Graph
             </ThemedText>
-
           </Pressable>
 
 
@@ -390,7 +426,12 @@ const trendPercent =
 
             <ThemedView
               key={workout.id}
-              style={styles.card}
+              style={[
+                styles.card,
+                {
+                  backgroundColor: Colors[colorScheme].card,
+                },
+              ]}
             >
 
 
@@ -486,8 +527,14 @@ const trendPercent =
 
         {view === "graph" && (
 
-          <ThemedView style={styles.card}>
-
+            <ThemedView
+              style={[
+                styles.card,
+                {
+                  backgroundColor: Colors[colorScheme].card,
+                },
+              ]}
+            >
 
             <ThemedText style={styles.header}>
               {selectedExercise
@@ -510,11 +557,28 @@ const trendPercent =
             </ThemedText>
 
           
-          <ThemedView style={styles.pickerWrapper}>
+          <ThemedView
+            style={[
+              styles.pickerWrapper,
+              {
+                backgroundColor: Colors[colorScheme].card,
+              },
+            ]}
+          >
 
             <Picker
-              style={styles.picker}
-              itemStyle={styles.pickerItem}
+              style={[
+                styles.picker,
+                {
+                  color: Colors[colorScheme].text,
+                },
+              ]}
+              itemStyle={[
+                styles.pickerItem,
+                {
+                  color: Colors[colorScheme].text,
+                },
+              ]}
               selectedValue={selectedSplit}
               onValueChange={(value)=>{
 
@@ -571,11 +635,28 @@ const trendPercent =
               Exercise:
             </ThemedText>
 
-        <ThemedView style={styles.pickerWrapper}>
+        <ThemedView
+          style={[
+            styles.pickerWrapper,
+            {
+              backgroundColor: Colors[colorScheme].card,
+            },
+          ]}
+        >
 
             <Picker
-              style={styles.picker}
-              itemStyle={styles.pickerItem}
+              style={[
+                styles.picker,
+                {
+                  color: Colors[colorScheme].text,
+                },
+              ]}
+              itemStyle={[
+                styles.pickerItem,
+                {
+                  color: Colors[colorScheme].text,
+                },
+              ]}
               selectedValue={selectedExercise}
               onValueChange={(value)=>
                 setSelectedExercise(value)
@@ -600,10 +681,27 @@ const trendPercent =
               Metric:
             </ThemedText>
 
-          <ThemedView style={styles.pickerWrapper}>
+          <ThemedView
+            style={[
+              styles.pickerWrapper,
+              {
+                backgroundColor: Colors[colorScheme].card,
+              },
+            ]}
+          >
             <Picker
-              style={styles.picker}
-              itemStyle={styles.pickerItem}
+              style={[
+                styles.picker,
+                {
+                  color: Colors[colorScheme].text,
+                },
+              ]}
+              itemStyle={[
+                styles.pickerItem,
+                {
+                  color: Colors[colorScheme].text,
+                },
+              ]}
               selectedValue={metric}
               onValueChange={(value)=>
                 setMetric(value)
@@ -641,7 +739,14 @@ const trendPercent =
               graphData.length > 0 && (
 
                 <>
-                  <ThemedView style={styles.statsCard}>
+                  <ThemedView
+                    style={[
+                      styles.statsCard,
+                      {
+                        backgroundColor: Colors[colorScheme].card,
+                      },
+                    ]}
+                  >
 
                     <ThemedText>
                       Sessions: {sessionCount}
@@ -773,7 +878,7 @@ const trendPercent =
       </ScrollView>
 
 
-    </ThemedView>
+    </ScreenContainer>
 
   );
 
@@ -784,11 +889,6 @@ const trendPercent =
 
 const styles = StyleSheet.create({
 
-  container:{
-    flex:1,
-    padding:20,
-  },
-
 
   scrollContent:{
     paddingBottom:40,
@@ -796,9 +896,10 @@ const styles = StyleSheet.create({
 
 
   title:{
-    fontSize:28,
-    marginBottom:20,
-  },
+  fontSize:28,
+  lineHeight:36,
+  marginBottom:20,
+},
 
 
   toggleContainer:{
@@ -812,17 +913,12 @@ const styles = StyleSheet.create({
     paddingVertical:10,
     paddingHorizontal:25,
     borderRadius:10,
-    backgroundColor:"#555",
   },
 
-
-  activeButton:{
-    backgroundColor:"#0a7ea4",
-  },
 
 
   buttonText:{
-    color:"white",
+    fontWeight:"600",
   },
 
 
@@ -840,18 +936,15 @@ const styles = StyleSheet.create({
   },
 
  picker:{
-  height:100,
-  color:"#fff",
+  height:100
 },
 
 pickerItem:{
   height:100,
   fontSize:16,
-  color:"#fff",
 },
 
 pickerWrapper:{
-  backgroundColor:"#333",
   borderRadius:8,
   marginBottom:12,
   height:100,
@@ -875,10 +968,10 @@ pickerWrapper:{
 
 
   emptyState:{
-    marginTop:10,
-    color:"#777",
-    textAlign:"center",
-  },
+  marginTop:10,
+  opacity:0.6,
+  textAlign:"center",
+},
 
 
 
@@ -890,11 +983,10 @@ pickerWrapper:{
   },
 
   statsCard:{
-    padding:12,
-    borderRadius:10,
-    marginBottom:15,
-    backgroundColor:"#222",
-  }
+  padding:12,
+  borderRadius:10,
+  marginBottom:15,
+}
 
 
 });

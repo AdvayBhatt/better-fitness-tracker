@@ -1,5 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Colors } from "@/constants/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { useWorkouts } from "@/context/WorkoutContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -14,6 +16,8 @@ export default function SplitScreen() {
 
   const { split } = useLocalSearchParams();
   const router = useRouter();
+
+  const { colorScheme } = useTheme();
 
   const { workouts } = useWorkouts();
 
@@ -49,34 +53,42 @@ export default function SplitScreen() {
 
           <View style={styles.headerRow}>
 
-              <Pressable
-                onPress={() => router.back()}
-                style={styles.backButton}
-              >
-                <ThemedText style={styles.backText}>
-                  ←
-                </ThemedText>
-              </Pressable>
-
-
-              <ThemedText style={styles.title}>
-                {workout.name} Session
+            <Pressable
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <ThemedText style={styles.backText}>
+                ←
               </ThemedText>
+            </Pressable>
 
 
-              <View style={styles.headerSpacer} />
+            <ThemedText style={styles.title}>
+              {workout.name} Preview
+            </ThemedText>
 
-            </View>
+
+            <View style={styles.headerSpacer} />
+
+          </View>
 
 
 
           {workout.exercises.map((exercise,index)=>(
 
             <ThemedView
-              key={exercise.instanceId ?? `${exercise.id}-${index}`}
-              style={styles.exerciseCard}
+              key={
+                exercise.instanceId ??
+                `${exercise.id}-${index}`
+              }
+              style={[
+                styles.exerciseCard,
+                {
+                  backgroundColor:
+                    Colors[colorScheme].card,
+                },
+              ]}
             >
-
 
               <ThemedText style={styles.exerciseName}>
                 {exercise.name}
@@ -123,7 +135,6 @@ export default function SplitScreen() {
 
               )}
 
-
             </ThemedView>
 
           ))}
@@ -131,9 +142,17 @@ export default function SplitScreen() {
 
 
           <Pressable
-            style={styles.startButton}
+            style={[
+              styles.startButton,
+              {
+                backgroundColor:
+                  Colors[colorScheme].tint,
+              },
+            ]}
             onPress={() =>
-              router.push(`/workout/session?split=${split}`)
+              router.replace(
+                `/workout/session?split=${split}`
+              )
             }
           >
 
@@ -167,17 +186,16 @@ const styles = StyleSheet.create({
 
 
   container:{
-    paddingHorizontal:20,
-    paddingTop:20,
-    paddingBottom:40,
-    alignItems:"center",
-  },
+  paddingHorizontal:20,
+  paddingTop:15,
+  paddingBottom:40,
+  alignItems:"center",
+},
 
 
   title:{
-    fontSize:26,
+    fontSize:24,
     fontWeight:"bold",
-    marginBottom:25,
     textAlign:"center",
   },
 
@@ -189,30 +207,36 @@ const styles = StyleSheet.create({
     borderRadius:12,
   },
 
+
   headerRow:{
-  width:"100%",
-  flexDirection:"row",
-  alignItems:"center",
-  justifyContent:"space-between",
-  marginBottom:25,
-},
+    width:"100%",
+    flexDirection:"row",
+    alignItems:"center",
+    justifyContent:"center",
+    marginTop:10,
+    marginBottom:25,
+  },
 
 
-backButton:{
-  width:40,
-  height:40,
-  justifyContent:"center",
-},
+  backButton:{
+    position:"absolute",
+    left:0,
+    width:40,
+    height:40,
+    justifyContent:"center",
+    alignItems:"center",
+  },
 
 
-backText:{
-  fontSize:32,
-},
+  backText:{
+    fontSize:32,
+    lineHeight:36,
+  },
 
 
-headerSpacer:{
-  width:40,
-},
+  headerSpacer:{
+    width:40,
+  },
 
 
   exerciseName:{
@@ -227,13 +251,12 @@ headerSpacer:{
     paddingVertical:15,
     paddingHorizontal:40,
     borderRadius:12,
-    backgroundColor:"#0a7ea4",
   },
 
 
   buttonText:{
-    color:"white",
     fontWeight:"bold",
+    color:"white",
   },
 
 });

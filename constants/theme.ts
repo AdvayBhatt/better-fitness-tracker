@@ -17,16 +17,18 @@ export const Colors = {
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: '#0a7ea4',
+    buttonText: '#FFFFFF',   // add this
   },
 
   dark: {
     text: '#ECEDEE',
     background: '#151718',
     card: '#222526',
-    tint: '#fff',
+    tint: '#0a7ea4',
     icon: '#9BA1A6',
+    tabIconSelected: '#0a7ea4',
     tabIconDefault: '#9BA1A6',
-    tabIconSelected: '#fff',
+    buttonText: '#FFFFFF',   // add this
   },
 };
 

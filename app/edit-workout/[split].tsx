@@ -1,9 +1,9 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors } from "@/constants/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { useWorkouts } from "@/context/WorkoutContext";
 import { exercises as availableExercises } from "@/data/exercises";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -17,12 +17,17 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 
+function generateInstanceId(){
+  return `${Date.now()}-${Math.random()}`;
+}
+
+
 export default function EditSplit() {
 
   const { split } =
     useLocalSearchParams<{ split:string }>();
 
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useTheme();
 
 
   const {
@@ -59,7 +64,27 @@ export default function EditSplit() {
 
     if(workout){
 
-      setExercises(workout.exercises);
+      const migratedExercises = workout.exercises.map(
+        exercise => ({
+          ...exercise,
+          instanceId:
+            exercise.instanceId ?? generateInstanceId(),
+        })
+      );
+
+      setExercises(migratedExercises);
+
+      const needsMigration =
+        workout.exercises.some(
+          exercise => !exercise.instanceId
+        );
+
+      if(needsMigration){
+        updateWorkout({
+          ...workout,
+          exercises: migratedExercises,
+        });
+      }
 
       setName(
         workout.name === "New Split"
@@ -110,7 +135,7 @@ export default function EditSplit() {
 
       {
         ...exercise,
-        instanceId: Date.now().toString(),
+        instanceId: generateInstanceId(),
       }
 
     ];
@@ -118,16 +143,6 @@ export default function EditSplit() {
 
 
     setExercises(updatedExercises);
-
-
-
-    updateWorkout({
-
-      ...currentWorkout,
-
-      exercises: updatedExercises,
-
-    });
 
 
 
@@ -149,16 +164,6 @@ export default function EditSplit() {
 
     setExercises(updatedExercises);
 
-
-
-    updateWorkout({
-
-      ...currentWorkout,
-
-      exercises: updatedExercises,
-
-    });
-
   }
 
 
@@ -167,7 +172,15 @@ export default function EditSplit() {
 
   return (
 
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        {
+          backgroundColor:
+            Colors[colorScheme ?? "light"].background,
+        },
+      ]}
+    >
 
       <ThemedView style={styles.flexContainer}>
 
@@ -197,9 +210,7 @@ export default function EditSplit() {
 
             placeholder="Split name"
 
-            placeholderTextColor={
-              Colors[colorScheme ?? "light"].text
-            }
+            placeholderTextColor="#687076"
 
             style={[
               styles.input,
@@ -226,7 +237,7 @@ export default function EditSplit() {
 
             <ThemedView
 
-              key={exercise.instanceId}
+              key={exercise.instanceId ?? `${exercise.id}-${index}`}
 
               style={styles.exerciseRow}
 
@@ -373,7 +384,9 @@ export default function EditSplit() {
 
             itemStyle={{
               color:
-                Colors[colorScheme ?? "light"].text
+                colorScheme === "dark"
+                  ? "#ECEDEE"
+                  : "#11181C"
             }}
 
           >
@@ -424,7 +437,7 @@ export default function EditSplit() {
 
           >
 
-            <ThemedText>
+            <ThemedText style={styles.buttonText}>
               + Add Exercise
             </ThemedText>
 
@@ -461,7 +474,7 @@ export default function EditSplit() {
 
           >
 
-            <ThemedText>
+            <ThemedText style={styles.buttonText}>
               Save Split
             </ThemedText>
 
@@ -557,6 +570,12 @@ const styles = StyleSheet.create({
     fontSize:18,
     fontWeight:"bold",
     marginBottom:5,
+  },
+
+
+  buttonText:{
+    color:"white",
+    fontWeight:"bold",
   },
 
 });

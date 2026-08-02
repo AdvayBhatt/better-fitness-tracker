@@ -4,6 +4,8 @@ import { useWorkouts } from "@/context/WorkoutContext";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
+import { Colors } from "@/constants/theme";
+import { useTheme } from "@/context/ThemeContext";
 import {
   Modal,
   Pressable,
@@ -11,6 +13,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { saveWorkout } from "@/data/workoutStorage";
 
@@ -21,6 +24,7 @@ export default function WorkoutSession() {
 
   const { workouts } = useWorkouts();
 
+  const { colorScheme } = useTheme();
 
   const workout = workouts.find(
     item => item.id === split
@@ -229,7 +233,9 @@ export default function WorkoutSession() {
 
   return (
 
-    <ThemedView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea}>
+
+    <ThemedView style={styles.screen}>
 
       <View style={styles.headerRow}>
 
@@ -250,8 +256,6 @@ export default function WorkoutSession() {
           {currentWorkout.name} Session
         </ThemedText>
 
-
-        <View style={styles.headerSpacer} />
 
       </View>
 
@@ -294,7 +298,13 @@ export default function WorkoutSession() {
         {!hasStarted && (
 
           <Pressable
-            style={styles.button}
+            style={[
+              styles.button,
+              {
+                backgroundColor:
+                  Colors[colorScheme ?? "light"].tint,
+              },
+            ]}
             onPress={startWorkout}
           >
 
@@ -386,10 +396,18 @@ export default function WorkoutSession() {
 </ThemedText>
 
 
+
+
 {completedSets.map((set, index) => (
  <ThemedView
   key={index}
-  style={styles.completedSet}
+  style={[
+    styles.completedSet,
+    {
+      backgroundColor:
+        Colors[colorScheme ?? "light"].card,
+    },
+  ]}
 >
 
   <ThemedText>
@@ -410,7 +428,13 @@ export default function WorkoutSession() {
 
 
         <Pressable
-          style={styles.button}
+          style={[
+            styles.button,
+            {
+              backgroundColor:
+                Colors[colorScheme ?? "light"].tint,
+            },
+          ]}
           disabled={exerciseComplete}
           onPress={completeSet}
         >
@@ -427,7 +451,13 @@ export default function WorkoutSession() {
         {exerciseComplete && (
 
         <Pressable
-          style={styles.button}
+          style={[
+            styles.button,
+            {
+              backgroundColor:
+                Colors[colorScheme ?? "light"].tint,
+            },
+          ]}
           onPress={async()=>{
 
 
@@ -533,7 +563,13 @@ export default function WorkoutSession() {
 
 
             <Pressable
-              style={styles.modalButton}
+              style={[
+                styles.modalButton,
+                {
+                  backgroundColor:
+                    Colors[colorScheme ?? "light"].tint,
+                },
+              ]}
               onPress={()=>{
                 router.replace("/progress");
               }}
@@ -555,6 +591,8 @@ export default function WorkoutSession() {
 
     </ThemedView>
 
+  </SafeAreaView>
+
   );
 
 }
@@ -567,18 +605,25 @@ safeArea:{
  flex:1,
 },
 
+screen:{
+  flex:1,
+},
+
 container:{
  flexGrow:1,
- justifyContent:"center",
  alignItems:"center",
  gap:15,
- padding:20,
+ paddingHorizontal:20,
+ paddingBottom:40,
+ paddingTop:20,
 },
 
 title:{
   fontSize:28,
-  flex:1,
   textAlign:"center",
+  fontWeight:"bold",
+  lineHeight:36,
+  paddingTop:4,
 },
 
 exercise:{
@@ -588,43 +633,47 @@ exercise:{
 button:{
  padding:15,
  borderRadius:10,
- backgroundColor:"#0a7ea4",
 },
 
 headerRow:{
+  width:"100%",
   flexDirection:"row",
   alignItems:"center",
-  paddingHorizontal:20,
-  paddingTop:15,
+  justifyContent:"center",
+  marginTop:10,
+  marginBottom:25,
 },
 
 
 
 backButton:{
+  position:"absolute",
+  left:20,
   width:40,
   height:40,
   justifyContent:"center",
+  alignItems:"center",
 },
 
 
 backText:{
   fontSize:32,
+  lineHeight:32,
+  transform:[{translateY:5}],
 },
 
 completedSet:{
   flexDirection:"row",
   justifyContent:"space-between",
   width:"100%",
-  padding:10,
+  padding:12,
+  borderRadius:10,
 },
 
-
-headerSpacer:{
-  width:40,
-},
 
 buttonText:{
  color:"white",
+ fontWeight:"bold",
 },
 
 modalContainer:{
@@ -651,7 +700,6 @@ modalButton:{
   width:"100%",
   padding:15,
   borderRadius:10,
-  backgroundColor:"#0a7ea4",
   alignItems:"center",
 },
 

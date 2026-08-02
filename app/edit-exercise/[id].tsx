@@ -1,8 +1,8 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors } from "@/constants/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { useWorkouts } from "@/context/WorkoutContext";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
@@ -23,7 +23,7 @@ export default function EditExercise() {
 
 
 
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useTheme();
 
 
   const {
@@ -279,7 +279,13 @@ export default function EditExercise() {
         onPress={saveExercise}
       >
 
-        <ThemedText>
+        <ThemedText
+          style={
+            colorScheme === "light"
+              ? styles.buttonTextLight
+              : undefined
+          }
+        >
           Save Exercise
         </ThemedText>
 
@@ -322,6 +328,11 @@ const styles = StyleSheet.create({
     borderRadius:10,
     backgroundColor:"#0a7ea4",
     alignItems:"center",
+  },
+
+
+  buttonTextLight:{
+    color:"white",
   },
 
 });
