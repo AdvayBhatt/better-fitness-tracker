@@ -1,5 +1,6 @@
 import { ThemeProvider } from "@/context/ThemeContext";
 import { WorkoutProvider } from "@/context/WorkoutContext";
+import { WorkoutSessionProvider } from "@/context/WorkoutSessionContext";
 import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -10,6 +11,9 @@ export default function RootLayout() {
       <ThemeProvider>
 
         <WorkoutProvider>
+
+          <WorkoutSessionProvider>
+
 
           <Stack>
 
@@ -37,6 +41,8 @@ export default function RootLayout() {
             />
 
           </Stack>
+            </WorkoutSessionProvider>
+
 
         </WorkoutProvider>
 

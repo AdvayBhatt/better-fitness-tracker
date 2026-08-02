@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useWorkouts } from "@/context/WorkoutContext";
+import { useWorkoutSession } from "@/context/WorkoutSessionContext";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
@@ -15,7 +16,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { saveWorkout } from "@/data/workoutStorage";
 
 
 export default function WorkoutSession() {
@@ -24,33 +24,36 @@ export default function WorkoutSession() {
 
   const { workouts } = useWorkouts();
 
+const {
+  sessionWorkout,
+  startWorkout,
+  finishWorkout,
+  currentExerciseIndex,
+  setCurrentExerciseIndex,
+  activeWorkout,
+  updateSet,
+  updateTimer,
+} = useWorkoutSession();
+
+
+const exerciseDuration =
+  activeWorkout?.currentExerciseDuration ?? 0;
+
+
+const totalWorkoutDuration =
+  activeWorkout?.elapsedSeconds ?? 0;
+
+
+const currentSetDuration =
+  activeWorkout?.currentSetDuration ?? 0;
+
   const { colorScheme } = useTheme();
 
-  const workout = workouts.find(
+  const workout =
+  sessionWorkout ??
+  workouts.find(
     item => item.id === split
   );
-
-
-  const [completedSets,setCompletedSets] = useState<
-    {
-      weight:number;
-      reps:number;
-      duration:number;
-    }[]
-  >([]);
-
-
-  const [completedExercises,setCompletedExercises] = useState<
-    {
-      exerciseName:string;
-      sets:{
-        weight:number;
-        reps:number;
-        duration:number;
-      }[];
-      totalDuration:number;
-    }[]
-  >([]);
 
 
   const [currentWeight,setCurrentWeight] =
@@ -61,9 +64,6 @@ export default function WorkoutSession() {
     useState<number | null>(null);
 
 
-  const [currentExerciseIndex,setCurrentExerciseIndex]
-    = useState(0);
-
 
   const [showCompleteModal,setShowCompleteModal]
     = useState(false);
@@ -72,9 +72,6 @@ export default function WorkoutSession() {
   const [hasStarted,setHasStarted]
     = useState(false);
 
-  const [exerciseDuration,setExerciseDuration] = useState(0);
-
-  const [totalWorkoutDuration,setTotalWorkoutDuration] = useState(0);
 
 
   const [isTimerRunning,setIsTimerRunning]
@@ -82,10 +79,6 @@ export default function WorkoutSession() {
 
   const [isSetTimerRunning,setIsSetTimerRunning]
   = useState(false); // current set timer
-
-
-  const [currentSetDuration,setCurrentSetDuration]
-    = useState(0);
 
 
 
@@ -107,31 +100,53 @@ export default function WorkoutSession() {
 
 
 
+
  useEffect(()=>{
 
   if(!isTimerRunning && !isSetTimerRunning) return;
 
 
-  const timer=setInterval(()=>{
+  const timer = setInterval(()=>{
 
-    if(isTimerRunning){
-      setExerciseDuration(prev=>prev+1);
-      setTotalWorkoutDuration(prev=>prev+1);
-    }
+  console.log("TIMER TICK");
+
+  if(isTimerRunning){
+
+    console.log("MAIN TIMER RUNNING");
+
+    updateTimer({
+      elapsedSeconds:
+        (activeWorkout?.elapsedSeconds ?? 0) + 1,
+
+      currentExerciseDuration:
+        (activeWorkout?.currentExerciseDuration ?? 0) + 1,
+    });
+
+  }
 
 
-    if(isSetTimerRunning){
-      setCurrentSetDuration(prev=>prev+1);
-    }
+  if(isSetTimerRunning){
 
+    console.log("SET TIMER RUNNING");
 
-  },1000);
+    updateTimer({
+      currentSetDuration:
+        (activeWorkout?.currentSetDuration ?? 0) + 1,
+    });
+
+  }
+
+},1000);
 
 
   return()=>clearInterval(timer);
 
 
-},[isTimerRunning,isSetTimerRunning]);
+},[
+  isTimerRunning,
+  isSetTimerRunning,
+  activeWorkout,
+]);
 
 
 
@@ -153,6 +168,19 @@ export default function WorkoutSession() {
   const currentExercise = foundExercise;
 
 
+  const completedSets =
+  activeWorkout?.exercises[currentExerciseIndex]
+    ?.sets.filter(
+      set => set.completed
+    )
+    .map(
+      set => ({
+        weight: set.weight,
+        reps: set.reps,
+        duration: set.duration ?? 0
+      })
+    ) ?? [];
+
 
   const exerciseComplete =
     currentExercise.type === "cardio"
@@ -161,13 +189,22 @@ export default function WorkoutSession() {
 
 
 
-  function startWorkout(){
+async function handleStartWorkout(){
+
+  console.log("START PRESSED");
+
+  if (!workout) return;
+
+  if (!activeWorkout) {
+    await startWorkout(workout);
+  }
+
+  console.log("AFTER START", activeWorkout);
 
   setHasStarted(true);
 
   setIsTimerRunning(true);
-
-  setIsSetTimerRunning(true);
+setIsSetTimerRunning(true);
 
 }
 
@@ -193,40 +230,43 @@ export default function WorkoutSession() {
 
 
 
-  function completeSet(){
+function completeSet() {
 
-  const finishedSet = {
-    weight:
-      currentExercise.type==="strength"
-        ? currentWeight ?? currentExercise.weight
-        : 0,
+  if (!activeWorkout) return;
 
-    reps:
-      currentExercise.type==="strength"
-        ? currentReps ?? currentExercise.reps
-        : 0,
 
+  const nextIncompleteSet =
+    activeWorkout.exercises[
+      currentExerciseIndex
+    ].sets.findIndex(
+      set => !set.completed
+    );
+
+
+  if (nextIncompleteSet === -1) {
+    return;
+  }
+
+
+ updateSet(
+  currentExerciseIndex,
+  nextIncompleteSet,
+  {
+    completed: true,
     duration: currentSetDuration,
-  };
+  }
+);
 
 
-  setCompletedSets(prev => [
-    ...prev,
-    finishedSet,
-  ]);
+  updateTimer({
+    currentSetDuration: 0,
+  });
 
-
-  // reset ONLY set timer
-  setCurrentSetDuration(0);
-
-
-  // pause timer
   setIsTimerRunning(false);
 
   setIsSetTimerRunning(false);
 
 }
-
 
 
 
@@ -305,8 +345,7 @@ export default function WorkoutSession() {
                   Colors[colorScheme ?? "light"].tint,
               },
             ]}
-            onPress={startWorkout}
-          >
+            onPress={handleStartWorkout}          >
 
             <ThemedText style={styles.buttonText}>
               Start Workout
@@ -462,59 +501,30 @@ export default function WorkoutSession() {
 
 
             if(
-              currentExerciseIndex <
-              currentWorkout.exercises.length-1
-            ){
+                currentExerciseIndex <
+                currentWorkout.exercises.length - 1
+              ){
 
-              setCompletedExercises(prev => [
-                ...prev,
-                {
-                  exerciseName: currentExercise.name,
-                  sets: completedSets,
-                  totalDuration: exerciseDuration,
-                }
-              ]);
+                setCurrentExerciseIndex(prev => prev + 1);
 
-              setCurrentExerciseIndex(prev => prev + 1);
+                updateTimer({
+                  currentExerciseDuration: 0,
+                });
 
-              setCompletedSets([]);
+                updateTimer({
+                  currentSetDuration: 0,
+                });
 
-              setExerciseDuration(0);
+                setIsTimerRunning(false);
 
-              setCurrentSetDuration(0);
+                setIsSetTimerRunning(false);
 
-              setIsTimerRunning(false);
-
-              setIsSetTimerRunning(false);
-
-
-            }
+              }
             else{
 
               pauseTimer();
 
-              await saveWorkout({
-
-                id: Date.now().toString(),
-
-                workoutName: currentWorkout.name,
-
-                split: currentWorkout.name,
-
-                date: new Date().toISOString(),
-
-                duration: totalWorkoutDuration,
-
-                exercises:[
-                  ...completedExercises,
-                  {
-                    exerciseName: currentExercise.name,
-                    sets: completedSets,
-                    totalDuration: exerciseDuration,
-                  }
-                ]
-
-              });
+              await finishWorkout();
 
 
               setShowCompleteModal(true);

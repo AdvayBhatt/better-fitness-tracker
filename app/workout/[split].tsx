@@ -3,6 +3,7 @@ import { ThemedView } from "@/components/themed-view";
 import { Colors } from "@/constants/theme";
 import { useTheme } from "@/context/ThemeContext";
 import { useWorkouts } from "@/context/WorkoutContext";
+import { useWorkoutSession } from "@/context/WorkoutSessionContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Pressable,
@@ -20,6 +21,7 @@ export default function SplitScreen() {
   const { colorScheme } = useTheme();
 
   const { workouts } = useWorkouts();
+  const { startWorkout } = useWorkoutSession();
 
 
   const workout = workouts.find(
@@ -149,11 +151,13 @@ export default function SplitScreen() {
                   Colors[colorScheme].tint,
               },
             ]}
-            onPress={() =>
+            onPress={async () => {
+              await startWorkout(workout);
+
               router.replace(
                 `/workout/session?split=${split}`
-              )
-            }
+              );
+            }}
           >
 
             <ThemedText style={styles.buttonText}>
