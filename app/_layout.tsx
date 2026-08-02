@@ -1,11 +1,29 @@
+import { WorkoutProvider } from "@/context/WorkoutContext";
 import { Stack } from "expo-router";
 
 export default function RootLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    />
+    <WorkoutProvider>
+
+      <Stack>
+
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            headerShown: false,
+          }}
+        />
+
+        <Stack.Screen
+          name="workout/[split]"
+          options={{
+            title: "",
+            headerShown: false,
+          }}
+        />
+
+      </Stack>
+
+    </WorkoutProvider>
   );
 }
