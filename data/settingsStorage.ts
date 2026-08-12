@@ -2,6 +2,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 const SETTINGS_KEY = "user_settings";
+const ONBOARDING_KEY = "onboarding_complete";
+
+
+export type AssignedSex =
+  | "male"
+  | "female"
+  | "other"
+  | "unspecified";
 
 
 export type UserSettings = {
@@ -9,6 +17,8 @@ export type UserSettings = {
   bodyweight: string;
   height: string;
   units: "lbs" | "kg";
+  assignedSex: AssignedSex;
+  age: string;
 };
 
 
@@ -17,6 +27,8 @@ export const defaultSettings: UserSettings = {
   bodyweight: "155",
   height: "5'9\"",
   units: "lbs",
+  assignedSex: "unspecified",
+  age: "",
 };
 
 
@@ -61,6 +73,33 @@ export async function clearSettings(){
 
   await AsyncStorage.removeItem(
     SETTINGS_KEY
+  );
+
+}
+
+
+
+export async function getOnboardingComplete():
+  Promise<boolean> {
+
+  const saved =
+    await AsyncStorage.getItem(
+      ONBOARDING_KEY
+    );
+
+  return saved === "true";
+
+}
+
+
+
+export async function setOnboardingComplete(
+  complete: boolean
+){
+
+  await AsyncStorage.setItem(
+    ONBOARDING_KEY,
+    complete ? "true" : "false"
   );
 
 }

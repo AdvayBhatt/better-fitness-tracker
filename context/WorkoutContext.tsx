@@ -1,5 +1,6 @@
 import { workouts as initialWorkouts } from "@/data/workouts";
-import { createContext, useContext, useState } from "react";
+import { mfbLiveWorkouts } from "@/navigation/mfbLiveState";
+import { createContext, useContext, useEffect, useState } from "react";
 
 
 export type StrengthExercise = {
@@ -101,6 +102,13 @@ export function WorkoutProvider({
     useState<Workout[]>(
       addInstanceIds(initialWorkouts)
     );
+
+  // Keeps the mockup review tool's nav bridge (navigation/mfbBridge.ts) able
+  // to see real, current exercise instance ids, it has no other way to read
+  // this state, see navigation/mfbLiveState.ts for why.
+  useEffect(() => {
+    mfbLiveWorkouts.current = workouts;
+  }, [workouts]);
 
 
 

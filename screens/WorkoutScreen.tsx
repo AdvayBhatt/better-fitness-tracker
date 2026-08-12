@@ -1,4 +1,6 @@
 import { ConfirmModal } from "@/components/ConfirmModal";
+import PageMarker from "@/components/PageMarker";
+import { PressableScale } from "@/components/pressable-scale";
 import { ScreenContainer } from "@/components/screen-container";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -6,7 +8,9 @@ import { Colors } from "@/constants/theme";
 import { useTheme } from "@/context/ThemeContext";
 import { useWorkouts } from "@/context/WorkoutContext";
 import { useWorkoutSession } from "@/context/WorkoutSessionContext";
-import { router } from "expo-router";
+import type { RootStackParamList } from "@/navigation/types";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { Pressable, StyleSheet } from "react-native";
 
@@ -15,6 +19,9 @@ function generateId() {
 }
 
 export default function WorkoutScreen() {
+
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const { colorScheme } = useTheme();
 
@@ -39,6 +46,8 @@ export default function WorkoutScreen() {
 
   return (
     <ScreenContainer>
+
+      <PageMarker id="workout" name="Workout" description="Workout list and splits" />
 
       <ThemedView style={styles.content}>
 
@@ -74,7 +83,7 @@ export default function WorkoutScreen() {
     </ThemedText>
 
 
-    <Pressable
+    <PressableScale
       style={[
         styles.addButton,
         {
@@ -84,7 +93,7 @@ export default function WorkoutScreen() {
       ]}
       onPress={() => {
 
-        router.push("/workout/session");
+        navigation.navigate("WorkoutSession");
 
       }}
     >
@@ -93,12 +102,37 @@ export default function WorkoutScreen() {
         Resume Workout
       </ThemedText>
 
-    </Pressable>
+    </PressableScale>
 
 
   </ThemedView>
 
 )}
+
+        {workouts.length === 0 && !activeWorkout && (
+
+          <ThemedView
+            style={[
+              styles.emptyState,
+              {
+                backgroundColor:
+                  Colors[colorScheme].card,
+              },
+            ]}
+          >
+
+            <ThemedText style={styles.emptyTitle}>
+              No splits yet
+            </ThemedText>
+
+            <ThemedText style={styles.emptyBody}>
+              Create your first split to start building
+              and tracking your workouts.
+            </ThemedText>
+
+          </ThemedView>
+
+        )}
 
         {workouts.map((workout) => (
 
@@ -106,11 +140,8 @@ export default function WorkoutScreen() {
             key={workout.id}
             style={styles.outerCard}
             onPress={() =>
-              router.push({
-                pathname: "/workout/[split]",
-                params: {
-                  split: workout.id,
-                },
+              navigation.navigate("WorkoutSplit", {
+                split: workout.id,
               })
             }
           >
@@ -151,11 +182,8 @@ export default function WorkoutScreen() {
 
                       e.stopPropagation();
 
-                      router.push({
-                        pathname: "/edit-workout/[split]",
-                        params: {
-                          split: workout.id,
-                        },
+                      navigation.navigate("EditWorkout", {
+                        split: workout.id,
                       });
 
                     }}
@@ -202,7 +230,7 @@ export default function WorkoutScreen() {
 
 
 
-        <Pressable
+        <PressableScale
           style={[
             styles.addButton,
             {
@@ -229,15 +257,9 @@ export default function WorkoutScreen() {
 
 
 
-            router.push({
+            navigation.navigate("EditWorkout", {
 
-              pathname: "/edit-workout/[split]",
-
-              params: {
-
-                split: newWorkout.id,
-
-              },
+              split: newWorkout.id,
 
             });
 
@@ -252,7 +274,7 @@ export default function WorkoutScreen() {
           </ThemedText>
 
 
-        </Pressable>
+        </PressableScale>
 
 
       </ThemedView>
@@ -421,6 +443,42 @@ const styles = StyleSheet.create({
     color: "#fff",
 
     fontWeight: "600",
+
+  },
+
+
+
+  emptyState: {
+
+    width: "85%",
+
+    padding: 24,
+
+    borderRadius: 16,
+
+    alignItems: "center",
+
+    gap: 8,
+
+  },
+
+
+
+  emptyTitle: {
+
+    fontSize: 18,
+
+    fontWeight: "bold",
+
+  },
+
+
+
+  emptyBody: {
+
+    textAlign: "center",
+
+    opacity: 0.6,
 
   },
 

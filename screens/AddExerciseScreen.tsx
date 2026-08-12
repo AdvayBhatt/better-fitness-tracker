@@ -1,17 +1,25 @@
+import PageMarker from "@/components/PageMarker";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useWorkouts } from "@/context/WorkoutContext";
 import { exercises as availableExercises } from "@/data/exercises";
+import type { RootStackParamList } from "@/navigation/types";
 import { Picker } from "@react-native-picker/picker";
-import { router, useLocalSearchParams } from "expo-router";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import {
   Pressable,
   StyleSheet,
 } from "react-native";
 
-export default function EditSplit() {
-  const { split } = useLocalSearchParams();
+export default function AddExerciseScreen() {
+  const { split } =
+    useRoute<RouteProp<RootStackParamList, "AddExercise">>().params;
+
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList, "AddExercise">>();
 
   const { workouts, updateWorkout } = useWorkouts();
 
@@ -19,7 +27,13 @@ export default function EditSplit() {
     item => item.id === split
   );
 
+  // All hooks are declared before any early return so hook call counts
+  // stay constant across renders (rules of hooks).
   const [selectedExercise, setSelectedExercise] = useState("");
+
+  const [exercises, setExercises] = useState(
+    workout?.exercises ?? []
+  );
 
   if (!workout) {
     return (
@@ -30,11 +44,6 @@ export default function EditSplit() {
       </ThemedView>
     );
   }
-
-
-  const [exercises, setExercises] = useState(
-    workout.exercises
-  );
 
 
   function addExercise() {
@@ -64,6 +73,8 @@ export default function EditSplit() {
 
   return (
     <ThemedView style={styles.container}>
+
+      <PageMarker id="add-exercise" name="Add Exercise" description="Add a new exercise to a workout split" />
 
       <ThemedText style={styles.title}>
         Edit Split
@@ -162,7 +173,7 @@ export default function EditSplit() {
             exercises,
           });
 
-          router.back();
+          navigation.goBack();
 
         }}
       >

@@ -1,9 +1,13 @@
+import PageMarker from "@/components/PageMarker";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors } from "@/constants/theme";
 import { useTheme } from "@/context/ThemeContext";
 import { useWorkouts } from "@/context/WorkoutContext";
-import { router, useLocalSearchParams } from "expo-router";
+import type { RootStackParamList } from "@/navigation/types";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import {
   Pressable,
@@ -17,10 +21,11 @@ export default function EditExercise() {
   const {
     id,
     workoutId,
-  } = useLocalSearchParams();
+  } = useRoute<RouteProp<RootStackParamList, "EditExercise">>().params;
 
 
-
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList, "EditExercise">>();
 
 
   const { colorScheme } = useTheme();
@@ -45,6 +50,59 @@ export default function EditExercise() {
 
 
 
+  // All hooks are declared before any early return so hook call counts
+  // stay constant across renders (rules of hooks).
+
+  const [sets, setSets] = useState(
+    exercise?.type === "strength"
+      ? exercise.sets.toString()
+      : ""
+  );
+
+
+  const [reps, setReps] = useState(
+    exercise?.type === "strength"
+      ? exercise.reps.toString()
+      : ""
+  );
+
+
+  const [weight, setWeight] = useState(
+    exercise?.type === "strength"
+      ? exercise.weight.toString()
+      : ""
+  );
+
+
+  const [time, setTime] = useState(
+    exercise?.type === "cardio"
+      ? exercise.time.toString()
+      : ""
+  );
+
+
+  const [miles, setMiles] = useState(
+    exercise?.type === "cardio"
+      ? exercise.miles.toString()
+      : ""
+  );
+
+
+  const [resistance, setResistance] = useState(
+    exercise?.type === "cardio"
+      ? exercise.resistance.toString()
+      : ""
+  );
+
+
+  const [incline, setIncline] = useState(
+    exercise?.type === "cardio"
+      ? exercise.incline.toString()
+      : ""
+  );
+
+
+
   if (!workout || !exercise) {
     return (
       <ThemedView style={styles.container}>
@@ -54,56 +112,6 @@ export default function EditExercise() {
       </ThemedView>
     );
   }
-
-
-
-  const [sets, setSets] = useState(
-    exercise.type === "strength"
-      ? exercise.sets.toString()
-      : ""
-  );
-
-
-  const [reps, setReps] = useState(
-    exercise.type === "strength"
-      ? exercise.reps.toString()
-      : ""
-  );
-
-
-  const [weight, setWeight] = useState(
-    exercise.type === "strength"
-      ? exercise.weight.toString()
-      : ""
-  );
-
-
-  const [time, setTime] = useState(
-    exercise.type === "cardio"
-      ? exercise.time.toString()
-      : ""
-  );
-
-
-  const [miles, setMiles] = useState(
-    exercise.type === "cardio"
-      ? exercise.miles.toString()
-      : ""
-  );
-
-
-  const [resistance, setResistance] = useState(
-    exercise.type === "cardio"
-      ? exercise.resistance.toString()
-      : ""
-  );
-
-
-  const [incline, setIncline] = useState(
-    exercise.type === "cardio"
-      ? exercise.incline.toString()
-      : ""
-  );
 
 
 
@@ -146,7 +154,7 @@ export default function EditExercise() {
 
 
 
-    router.back();
+    navigation.goBack();
 
   }
 
@@ -161,6 +169,7 @@ export default function EditExercise() {
 
     <ThemedView style={styles.container}>
 
+      <PageMarker id="edit-exercise" name="Edit Exercise" description="Edit a single exercise's sets, reps, or weight" />
 
       <ThemedText style={styles.title}>
         {exercise.name}

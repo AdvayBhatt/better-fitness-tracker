@@ -1,14 +1,19 @@
 import { ConfirmModal } from "@/components/ConfirmModal";
+import PageMarker from "@/components/PageMarker";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useWorkouts } from "@/context/WorkoutContext";
 import { useWorkoutSession } from "@/context/WorkoutSessionContext";
-import { router, useLocalSearchParams } from "expo-router";
+import type { RootStackParamList } from "@/navigation/types";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
 
 import { Colors } from "@/constants/theme";
 import { useTheme } from "@/context/ThemeContext";
 import {
+  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -21,7 +26,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function WorkoutSession() {
 
-  const { split } = useLocalSearchParams();
+  const { split } =
+    useRoute<RouteProp<RootStackParamList, "WorkoutSession">>().params ?? {};
+
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList, "WorkoutSession">>();
 
   const { workouts } = useWorkouts();
 
@@ -148,9 +157,13 @@ const [isSetTimerRunning,setIsSetTimerRunning]
 
 if (loadingActiveWorkout) {
   return (
-    <ThemedView style={styles.safeArea}>
-      <ThemedText>
-        Loading workout...
+    <ThemedView style={[styles.safeArea, styles.centered]}>
+      <ActivityIndicator
+        size="large"
+        color={Colors[colorScheme ?? "light"].tint}
+      />
+      <ThemedText style={styles.centeredText}>
+        Loading your workout
       </ThemedText>
     </ThemedView>
   );
@@ -159,9 +172,9 @@ if (loadingActiveWorkout) {
   if(!workout || !foundExercise){
 
     return(
-      <ThemedView style={styles.safeArea}>
-        <ThemedText>
-          Workout not found
+      <ThemedView style={[styles.safeArea, styles.centered]}>
+        <ThemedText style={styles.centeredText}>
+          We could not find that workout
         </ThemedText>
       </ThemedView>
     );
@@ -272,6 +285,8 @@ function completeSet() {
 
     <SafeAreaView style={styles.safeArea}>
 
+    <PageMarker id="workout-session" name="Workout Session" description="Active workout session, set-by-set tracking" />
+
     <ThemedView style={styles.screen}>
 
 
@@ -280,7 +295,7 @@ function completeSet() {
         <Pressable
           onPress={() => {
             pauseTimer();
-            router.back();
+            navigation.goBack();
           }}
           style={styles.backButton}
         >
@@ -594,7 +609,7 @@ function completeSet() {
                 },
               ]}
               onPress={()=>{
-                router.replace("/progress");
+                navigation.navigate("Tabs", { screen: "progress" });
               }}
             >
 
@@ -623,7 +638,7 @@ function completeSet() {
       onConfirm={async () => {
         await cancelWorkout();
         setShowCancelModal(false);
-        router.replace("/");
+        navigation.navigate("Tabs", { screen: "workout" });
       }}
 
       onCancel={() => {
@@ -646,6 +661,16 @@ const styles=StyleSheet.create({
 
 safeArea:{
  flex:1,
+},
+
+centered:{
+  alignItems:"center",
+  justifyContent:"center",
+  gap:12,
+},
+
+centeredText:{
+  opacity:0.7,
 },
 
 screen:{

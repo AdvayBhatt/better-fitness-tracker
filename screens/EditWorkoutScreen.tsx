@@ -1,11 +1,15 @@
+import PageMarker from "@/components/PageMarker";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors } from "@/constants/theme";
 import { useTheme } from "@/context/ThemeContext";
 import { useWorkouts } from "@/context/WorkoutContext";
 import { exercises as availableExercises } from "@/data/exercises";
+import type { RootStackParamList } from "@/navigation/types";
 import { Picker } from "@react-native-picker/picker";
-import { router, useLocalSearchParams } from "expo-router";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
 import {
   Pressable,
@@ -25,7 +29,10 @@ function generateInstanceId(){
 export default function EditSplit() {
 
   const { split } =
-    useLocalSearchParams<{ split:string }>();
+    useRoute<RouteProp<RootStackParamList, "EditWorkout">>().params;
+
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList, "EditWorkout">>();
 
   const { colorScheme } = useTheme();
 
@@ -192,6 +199,8 @@ export default function EditSplit() {
       ]}
     >
 
+      <PageMarker id="edit-workout" name="Edit Workout" description="Edit a workout split's exercise list" />
+
       <ThemedView style={styles.flexContainer}>
 
 
@@ -341,17 +350,11 @@ export default function EditSplit() {
               
 
 
-                  router.push({
+                  navigation.navigate("EditExercise", {
 
-                    pathname:"/edit-exercise/[id]",
+                    id: exercise.instanceId,
 
-                    params:{
-
-                      id: exercise.instanceId,
-
-                      workoutId: currentWorkout.id,
-
-                    },
+                    workoutId: currentWorkout.id,
 
                   });
 
@@ -477,7 +480,7 @@ export default function EditSplit() {
 
 
 
-              router.back();
+              navigation.goBack();
 
 
             }}

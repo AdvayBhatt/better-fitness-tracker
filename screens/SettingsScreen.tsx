@@ -1,27 +1,53 @@
+import { InputModal } from "@/components/InputModal";
+import PageMarker from "@/components/PageMarker";
 import { ScreenContainer } from "@/components/screen-container";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors } from "@/constants/theme";
 import { useTheme } from "@/context/ThemeContext";
 import {
+  defaultSettings,
   getSettings,
   saveSettings,
-  UserSettings,
+  setOnboardingComplete,
+  type AssignedSex,
+  type UserSettings,
 } from "@/data/settingsStorage";
+import type { RootStackParamList } from "@/navigation/types";
+import {
+  sanitizeDecimal,
+  sanitizeInteger,
+  validateAge,
+  validateBodyweight,
+  validateHeight,
+  validateName,
+} from "@/utils/validation";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
 import {
-  Alert,
   Pressable,
   StyleSheet,
 } from "react-native";
 
 
-const defaultSettings: UserSettings = {
-  name: "Not set",
-  bodyweight: "155",
-  height: "5'9\"",
-  units: "lbs",
+type EditableField = "name" | "bodyweight" | "height" | "age";
+
+
+const SEX_LABELS: Record<AssignedSex, string> = {
+  male: "Male",
+  female: "Female",
+  other: "Other",
+  unspecified: "Prefer not to say",
 };
+
+
+const SEX_CYCLE: AssignedSex[] = [
+  "male",
+  "female",
+  "other",
+  "unspecified",
+];
 
 
 
@@ -29,6 +55,12 @@ export default function SettingsScreen() {
 
   const [settings, setSettings] =
     useState<UserSettings>(defaultSettings);
+
+  const [editingField, setEditingField] =
+    useState<EditableField | null>(null);
+
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
 
   const {
@@ -73,77 +105,80 @@ export default function SettingsScreen() {
 
 
 
-  function editName(){
-
-    Alert.prompt(
-      "Edit Name",
-      "Enter your name",
-      value => {
-
-        if(value){
-
-          updateSettings({
-            ...settings,
-            name:value,
-          });
-
-        }
-
-      }
-    );
-
-  }
-
-
-
-
-
-  function editBodyweight(){
-
-    Alert.prompt(
-      "Edit Bodyweight",
-      "Enter weight",
-      value => {
-
-        if(value){
-
-          updateSettings({
-            ...settings,
-            bodyweight:value,
-          });
-
-        }
-
-      }
-    );
-
-  }
+  const fieldConfig: Record<
+    EditableField,
+    {
+      title: string;
+      placeholder: string;
+      numeric: boolean;
+      value: string;
+      sanitize?: (value: string) => string;
+      validate: (value: string) => string | null;
+    }
+  > = {
+    name: {
+      title: "Edit name",
+      placeholder: "Your name",
+      numeric: false,
+      value: settings.name,
+      validate: validateName,
+    },
+    bodyweight: {
+      title: "Edit bodyweight",
+      placeholder: "Bodyweight",
+      numeric: true,
+      value: settings.bodyweight,
+      sanitize: sanitizeDecimal,
+      validate: validateBodyweight,
+    },
+    height: {
+      title: "Edit height",
+      placeholder: "For example 5'9 or 175cm",
+      numeric: false,
+      value: settings.height,
+      validate: validateHeight,
+    },
+    age: {
+      title: "Edit age",
+      placeholder: "Age in years",
+      numeric: true,
+      value: settings.age,
+      sanitize: sanitizeInteger,
+      validate: validateAge,
+    },
+  };
 
 
+  function submitField(value: string){
 
+    if(!editingField) return;
 
+    updateSettings({
+      ...settings,
+      [editingField]: value,
+    });
 
-  function editHeight(){
-
-    Alert.prompt(
-      "Edit Height",
-      "Enter height",
-      value => {
-
-        if(value){
-
-          updateSettings({
-            ...settings,
-            height:value,
-          });
-
-        }
-
-      }
-    );
+    setEditingField(null);
 
   }
 
+
+
+
+  function cycleAssignedSex(){
+
+    const currentIndex =
+      SEX_CYCLE.indexOf(settings.assignedSex);
+
+    const nextSex =
+      SEX_CYCLE[(currentIndex + 1) % SEX_CYCLE.length];
+
+    updateSettings({
+      ...settings,
+      assignedSex: nextSex,
+    });
+
+  }
 
 
 
@@ -185,6 +220,7 @@ export default function SettingsScreen() {
 
     <ScreenContainer>
 
+      <PageMarker id="settings" name="Settings" description="Profile and app preferences" />
 
       <ThemedText
         type="title"
@@ -214,7 +250,7 @@ export default function SettingsScreen() {
 
         <Pressable
           style={styles.row}
-          onPress={editName}
+          onPress={() => setEditingField("name")}
         >
 
           <ThemedText>
@@ -233,7 +269,7 @@ export default function SettingsScreen() {
 
         <Pressable
           style={styles.row}
-          onPress={editBodyweight}
+          onPress={() => setEditingField("bodyweight")}
         >
 
           <ThemedText>
@@ -252,7 +288,7 @@ export default function SettingsScreen() {
 
         <Pressable
           style={styles.row}
-          onPress={editHeight}
+          onPress={() => setEditingField("height")}
         >
 
           <ThemedText>
@@ -262,6 +298,44 @@ export default function SettingsScreen() {
 
           <ThemedText style={styles.value}>
             {settings.height}
+          </ThemedText>
+
+        </Pressable>
+
+
+
+
+        <Pressable
+          style={styles.row}
+          onPress={() => setEditingField("age")}
+        >
+
+          <ThemedText>
+            Age
+          </ThemedText>
+
+
+          <ThemedText style={styles.value}>
+            {settings.age ? settings.age : "Not set"}
+          </ThemedText>
+
+        </Pressable>
+
+
+
+
+        <Pressable
+          style={styles.row}
+          onPress={cycleAssignedSex}
+        >
+
+          <ThemedText>
+            Assigned sex
+          </ThemedText>
+
+
+          <ThemedText style={styles.value}>
+            {SEX_LABELS[settings.assignedSex]}
           </ThemedText>
 
         </Pressable>
@@ -387,6 +461,23 @@ export default function SettingsScreen() {
 
 
         <Pressable
+          style={styles.button}
+          onPress={async ()=>{
+            await setOnboardingComplete(false);
+            navigation.navigate("Onboarding");
+          }}
+        >
+
+          <ThemedText style={styles.buttonText}>
+            Reset Onboarding
+          </ThemedText>
+
+        </Pressable>
+
+
+
+
+        <Pressable
           style={[
             styles.button,
             styles.dangerButton,
@@ -404,6 +495,31 @@ export default function SettingsScreen() {
 
 
       </ThemedView>
+
+
+      <InputModal
+        visible={editingField !== null}
+        title={editingField ? fieldConfig[editingField].title : ""}
+        placeholder={
+          editingField ? fieldConfig[editingField].placeholder : ""
+        }
+        initialValue={
+          editingField ? fieldConfig[editingField].value : ""
+        }
+        keyboardType={
+          editingField && fieldConfig[editingField].numeric
+            ? "numeric"
+            : "default"
+        }
+        sanitize={
+          editingField ? fieldConfig[editingField].sanitize : undefined
+        }
+        validate={
+          editingField ? fieldConfig[editingField].validate : undefined
+        }
+        onSubmit={submitField}
+        onCancel={() => setEditingField(null)}
+      />
 
 
 

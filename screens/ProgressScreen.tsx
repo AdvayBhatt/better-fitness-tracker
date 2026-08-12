@@ -1,3 +1,4 @@
+import PageMarker from "@/components/PageMarker";
 import { ScreenContainer } from "@/components/screen-container";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -9,8 +10,10 @@ import {
   deleteWorkout,
   getWorkouts,
 } from "@/data/workoutStorage";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -53,21 +56,36 @@ export default function ProgressScreen() {
     useState<CompletedWorkout[]>([]);
 
 
+  const [loading, setLoading] =
+    useState(true);
 
-  useEffect(()=>{
 
-    async function loadWorkouts(){
 
-      const savedWorkouts =
-        await getWorkouts();
+  useFocusEffect(
+    useCallback(() => {
 
-      setWorkouts(savedWorkouts);
+      let active = true;
 
-    }
+      async function loadWorkouts(){
 
-    loadWorkouts();
+        const savedWorkouts =
+          await getWorkouts();
 
-  },[]);
+        if(active){
+          setWorkouts(savedWorkouts);
+          setLoading(false);
+        }
+
+      }
+
+      loadWorkouts();
+
+      return () => {
+        active = false;
+      };
+
+    }, [])
+  );
 
   
 
@@ -430,6 +448,7 @@ const trendPercent =
 
      <ScreenContainer>
 
+      <PageMarker id="progress" name="Progress" description="Workout history and trend chart" />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -516,7 +535,19 @@ const trendPercent =
 
 
 
-        {view === "table" && (
+        {loading && (
+
+          <ThemedView style={styles.loadingBox}>
+            <ActivityIndicator
+              size="large"
+              color={Colors[colorScheme].tint}
+            />
+          </ThemedView>
+
+        )}
+
+
+        {!loading && view === "table" && (
 
   <>
 
@@ -725,7 +756,7 @@ const trendPercent =
 
 
 
-        {view === "graph" && (
+        {!loading && view === "graph" && (
 
             <ThemedView
               style={[
@@ -1234,6 +1265,11 @@ const styles = StyleSheet.create({
 
   scrollContent:{
     paddingBottom:40,
+  },
+
+  loadingBox:{
+    paddingVertical:60,
+    alignItems:"center",
   },
 
 

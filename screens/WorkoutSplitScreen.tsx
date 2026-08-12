@@ -1,10 +1,15 @@
+import PageMarker from "@/components/PageMarker";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors } from "@/constants/theme";
 import { useTheme } from "@/context/ThemeContext";
 import { useWorkouts } from "@/context/WorkoutContext";
+import { PressableScale } from "@/components/pressable-scale";
 import { useWorkoutSession } from "@/context/WorkoutSessionContext";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import type { RootStackParamList } from "@/navigation/types";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   Pressable,
   ScrollView,
@@ -15,8 +20,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SplitScreen() {
 
-  const { split } = useLocalSearchParams();
-  const router = useRouter();
+  const { split } =
+    useRoute<RouteProp<RootStackParamList, "WorkoutSplit">>().params;
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList, "WorkoutSplit">>();
 
   const { colorScheme } = useTheme();
 
@@ -46,6 +53,8 @@ export default function SplitScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
 
+      <PageMarker id="workout-split" name="Workout Split" description="Workout split detail" />
+
       <ThemedView style={styles.screen}>
 
         <ScrollView
@@ -56,7 +65,7 @@ export default function SplitScreen() {
           <View style={styles.headerRow}>
 
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => navigation.goBack()}
               style={styles.backButton}
             >
               <ThemedText style={styles.backText}>
@@ -143,7 +152,7 @@ export default function SplitScreen() {
 
 
 
-          <Pressable
+          <PressableScale
             style={[
               styles.startButton,
               {
@@ -154,9 +163,9 @@ export default function SplitScreen() {
             onPress={async () => {
               await startWorkout(workout);
 
-              router.replace(
-                `/workout/session?split=${split}`
-              );
+              navigation.replace("WorkoutSession", {
+                split,
+              });
             }}
           >
 
@@ -164,7 +173,7 @@ export default function SplitScreen() {
               Start Session
             </ThemedText>
 
-          </Pressable>
+          </PressableScale>
 
 
         </ScrollView>
