@@ -72,3 +72,79 @@ export async function getWorkouts(): Promise<CompletedWorkout[]>{
   }
 
 }
+
+
+
+export async function deleteWorkout(
+  workoutId: string
+){
+  try {
+
+    const workouts =
+      await getWorkouts();
+
+    const updated =
+      workouts.filter(
+        workout =>
+          workout.id !== workoutId
+      );
+
+
+    await AsyncStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(updated)
+    );
+
+
+  } catch(error){
+
+    console.log(
+      "Error deleting workout:",
+      error
+    );
+
+  }
+}
+
+
+
+export async function deleteAllWorkouts(){
+
+  try {
+
+    await AsyncStorage.removeItem(
+      STORAGE_KEY
+    );
+
+  } catch(error){
+
+    console.log(
+      "Error deleting all workouts:",
+      error
+    );
+
+  }
+
+}
+
+
+
+export async function clearAllWorkouts(): Promise<void>{
+
+  try {
+
+    await AsyncStorage.removeItem(
+      STORAGE_KEY
+    );
+
+
+  } catch(error){
+
+    console.log(
+      "Error clearing workouts:",
+      error
+    );
+
+  }
+
+}

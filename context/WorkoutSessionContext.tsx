@@ -1,25 +1,25 @@
 import React, {
-    createContext,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 
 import {
-    ActiveWorkoutExercise,
-    ActiveWorkoutSession,
+  ActiveWorkoutExercise,
+  ActiveWorkoutSession,
 } from "@/types/workoutSession";
 
 import {
-    clearActiveWorkout,
-    getActiveWorkout,
-    saveActiveWorkout,
+  clearActiveWorkout,
+  getActiveWorkout,
+  saveActiveWorkout,
 } from "@/data/activeWorkoutStorage";
 
 import { saveWorkout } from "@/data/workoutStorage";
 
 import {
-    CompletedWorkout,
+  CompletedWorkout,
 } from "@/data/workoutHistory";
 
 
@@ -404,7 +404,15 @@ function updateTimer(
 
 };
 
-
+    
+    console.log(
+    "SAVING COMPLETED WORKOUT:",
+    JSON.stringify(
+      completedWorkout,
+      null,
+      2
+    )
+  );
 
     await saveWorkout(
       completedWorkout
@@ -414,6 +422,9 @@ function updateTimer(
     setActiveWorkout(null);
 
     await clearActiveWorkout();
+
+    console.log("FINISHED WORKOUT - ACTIVE WORKOUT CLEARED");
+    console.log("activeWorkout should now be null");
 
   }
 

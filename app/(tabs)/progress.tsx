@@ -4,12 +4,17 @@ import { ThemedView } from "@/components/themed-view";
 import { Colors } from "@/constants/theme";
 import { useTheme } from "@/context/ThemeContext";
 import { CompletedWorkout } from "@/data/workoutHistory";
-import { getWorkouts } from "@/data/workoutStorage";
+import {
+  deleteAllWorkouts,
+  deleteWorkout,
+  getWorkouts,
+} from "@/data/workoutStorage";
 import { useEffect, useState } from "react";
 import {
+  Alert,
   Pressable,
   ScrollView,
-  StyleSheet,
+  StyleSheet
 } from "react-native";
 
 import { Picker } from "@react-native-picker/picker";
@@ -29,9 +34,16 @@ export default function ProgressScreen() {
 
 
   const [metric, setMetric] =
-    useState<
-      "weight" | "reps" | "volume" | "strength"
-    >("weight");
+  useState<
+    | "weight"
+    | "reps"
+    | "volume"
+    | "strength"
+    | "time"
+    | "distance"
+    | "resistance"
+    | "incline"
+  >("weight");
   
   const [selectedSplit, setSelectedSplit] =
     useState<string>("All");
@@ -57,6 +69,7 @@ export default function ProgressScreen() {
 
   },[]);
 
+  
 
 
   function formatTime(seconds:number){
@@ -73,6 +86,51 @@ export default function ProgressScreen() {
       .padStart(2,"0")}`;
 
   }
+
+async function handleDeleteWorkout(id:string){
+
+  await deleteWorkout(id);
+
+  setWorkouts(prev =>
+    prev.filter(
+      workout =>
+        workout.id !== id
+    )
+  );
+
+}
+
+
+
+async function handleDeleteAll(){
+
+  Alert.alert(
+    "Delete all workouts?",
+    "This cannot be undone.",
+    [
+      {
+        text:"Cancel",
+        style:"cancel",
+      },
+      {
+        text:"Delete All",
+        style:"destructive",
+        onPress: async()=>{
+
+          await deleteAllWorkouts();
+
+          setWorkouts([]);
+
+          setSelectedExercise("");
+
+          setSelectedSplit("All");
+
+        },
+      },
+    ]
+  );
+
+}
 
 const filteredWorkouts =
   selectedSplit === "All"
@@ -93,6 +151,18 @@ const filteredExerciseNames = Array.from(
     )
   )
 );
+
+const selectedExerciseData =
+  filteredWorkouts
+    .flatMap(workout => workout.exercises)
+    .find(
+      exercise =>
+        exercise.exerciseName === selectedExercise
+    );
+
+
+const selectedExerciseIsCardio =
+  selectedExerciseData?.type !== "strength";
 
 
 const splitNames = Array.from(
@@ -120,26 +190,31 @@ const splitNames = Array.from(
 ]);
 
 
-  const graphData = selectedExercise
-    ? [...filteredWorkouts]
-        .sort(
-          (a,b) =>
-            new Date(a.date).getTime() -
-            new Date(b.date).getTime()
-        )
-        .map(workout=>{
+ const graphData = selectedExercise
+  ? [...filteredWorkouts]
+      .sort(
+        (a,b) =>
+          new Date(a.date).getTime() -
+          new Date(b.date).getTime()
+      )
+      .map(workout=>{
 
-          const exercise =
-            workout.exercises.find(
-              item =>
-                item.exerciseName === selectedExercise
-            );
+        const exercise =
+          workout.exercises.find(
+            item =>
+              item.exerciseName === selectedExercise
+          );
 
 
-          if(!exercise){
-            return null;
-          }
+        if(!exercise){
+          return null;
+        }
 
+
+        let value = 0;
+
+
+        if(exercise.type === "strength"){
 
           const weights =
             exercise.sets.map(set => set.weight);
@@ -149,36 +224,53 @@ const splitNames = Array.from(
 
           const epleyValues =
             exercise.sets.map(
-              set => set.weight * (1 + set.reps / 30)
+              set =>
+                set.weight *
+                (1 + set.reps / 30)
             );
 
 
-          const value =
+          value =
             metric === "weight"
-              ? weights.length > 0
-                ? Math.max(...weights)
-                : 0
+              ? Math.max(...weights)
 
               : metric === "reps"
-              ? reps.length > 0
-                ? Math.max(...reps)
-                : 0
+              ? Math.max(...reps)
 
               : metric === "volume"
               ? exercise.sets.reduce(
                   (total,set)=>
-                    total + (set.weight * set.reps),
+                    total +
+                    (set.weight * set.reps),
                   0
                 )
 
-              : epleyValues.length > 0
-              ? Math.max(...epleyValues)
-              : 0;
+              : Math.max(...epleyValues);
 
 
-          return {
-            date:
-              new Date(workout.date)
+        } else {
+
+
+          value =
+            metric === "time"
+              ? exercise.time ?? 0
+
+              : metric === "distance"
+              ? exercise.miles ?? 0
+
+              : metric === "resistance"
+              ? exercise.resistance ?? 0
+
+              : exercise.incline ?? 0;
+
+        }
+
+
+
+        return {
+
+          date:
+            new Date(workout.date)
               .toLocaleDateString(
                 undefined,
                 {
@@ -187,19 +279,20 @@ const splitNames = Array.from(
                 }
               ),
 
-            value,
-          };
+          value,
+
+        };
 
 
-        })
-        .filter(
-          (
-            item
-          ): item is {date:string; value:number} =>
-            item !== null
-        )
+      })
+      .filter(
+        (
+          item
+        ): item is {date:string; value:number} =>
+          item !== null
+      )
 
-    : [];
+  : [];
 
 
     const exerciseStats = selectedExercise
@@ -217,25 +310,31 @@ const splitNames = Array.from(
               item.exerciseName === selectedExercise
           );
 
+
         return exercise
           ? {
               date: workout.date,
-              sets: exercise.sets,
+              sets: exercise.sets ?? [],
+              exercise,
             }
           : null;
 
       })
       .filter(
-        (
-          item
-        ): item is {date:string; sets:any[]} =>
-          item !== null
+        item => item !== null
       )
   : [];
 
 
-  const totalVolume =
-  exerciseStats.reduce(
+  const strengthStats =
+  exerciseStats.filter(
+    workout =>
+      workout.exercise.type === "strength"
+  );
+
+
+const totalVolume =
+  strengthStats.reduce(
     (total, workout) =>
       total +
       workout.sets.reduce(
@@ -248,7 +347,7 @@ const splitNames = Array.from(
 
 
 const allWeights =
-  exerciseStats.flatMap(
+  strengthStats.flatMap(
     workout =>
       workout.sets.map(
         set => set.weight
@@ -263,7 +362,7 @@ const bestWeight =
 
 
 const allEpleyValues =
-  exerciseStats.flatMap(
+  strengthStats.flatMap(
     workout =>
       workout.sets.map(
         set =>
@@ -419,25 +518,87 @@ const trendPercent =
 
         {view === "table" && (
 
-          <>
+  <>
+
+    <Pressable
+      style={[
+        styles.deleteAllButton,
+        {
+          opacity: workouts.length === 0 ? 0.5 : 1,
+        }
+      ]}
+      disabled={workouts.length === 0}
+      onPress={handleDeleteAll}
+    >
+
+      <ThemedText>
+        Delete All Workouts
+      </ThemedText>
+
+    </Pressable>
 
 
-          {filteredWorkouts.map(workout=>(
+    {filteredWorkouts.length === 0 && (
 
-            <ThemedView
-              key={workout.id}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: Colors[colorScheme].card,
-                },
-              ]}
-            >
+      <ThemedText style={styles.emptyState}>
+        No workout history yet.
+      </ThemedText>
+
+    )}
 
 
-              <ThemedText style={styles.header}>
-                {workout.workoutName}
-              </ThemedText>
+    {filteredWorkouts.map(workout=>(
+
+      <ThemedView
+        key={workout.id}
+        style={[
+          styles.card,
+          {
+            backgroundColor: Colors[colorScheme].card,
+          },
+        ]}
+      >
+
+
+              <ThemedView
+                  style={styles.cardHeader}
+                >
+
+                  <ThemedText style={styles.header}>
+                    {workout.workoutName}
+                  </ThemedText>
+
+
+                  <Pressable
+                    onPress={()=>{
+
+                      Alert.alert(
+                        "Delete workout?",
+                        "Remove this workout from history?",
+                        [
+                          {
+                            text:"Cancel",
+                            style:"cancel",
+                          },
+                          {
+                            text:"Delete",
+                            style:"destructive",
+                            onPress:()=>handleDeleteWorkout(workout.id),
+                          },
+                        ]
+                      );
+
+                    }}
+                  >
+
+                    <ThemedText>
+                      🗑️
+                    </ThemedText>
+
+                  </Pressable>
+
+
+                </ThemedView>
 
 
               <ThemedText>
@@ -469,36 +630,75 @@ const trendPercent =
 
 
 
-                  <ThemedText>
-                    Weight: {exercise.sets[0]?.weight ?? 0} lbs
-                  </ThemedText>
+                 {exercise.type === "strength" ? (
+
+  <>
+                <ThemedText>
+                  Weight: {exercise.sets[0]?.weight ?? 0} lbs
+                </ThemedText>
+
+                <ThemedText>
+                  Sets: {exercise.sets.length}
+                </ThemedText>
 
 
-                  <ThemedText>
-                    Sets: {exercise.sets.length}
-                  </ThemedText>
+                {exercise.sets.map((set,index)=>(
 
+                  <ThemedText key={index}>
 
-                  <ThemedText>
-                    Exercise Time:
+                    Set {index+1}:{" "}
+                    {set.weight} lbs × {set.reps} reps
                     {" "}
-                    {formatTime(exercise.totalDuration)}
+                    ({formatTime(set.duration)})
+
                   </ThemedText>
 
+                ))}
+                <ThemedText>
+                  Total Exercise Time:{" "}
+                  {formatTime(
+                    exercise.sets.reduce(
+                      (total,set) =>
+                        total + set.duration,
+                      0
+                    )
+                  )}
+                </ThemedText>
+
+              </>
+
+            ) : (
+
+              <>
+
+                <ThemedText>
+                  Time: {exercise.time ?? 0} minutes
+                </ThemedText>
 
 
-                  {exercise.sets.map((set,index)=>(
+                <ThemedText>
+                  Distance: {exercise.miles ?? 0} miles
+                </ThemedText>
 
-                    <ThemedText key={index}>
 
-                      Set {index+1}:{" "}
-                      {set.weight} lbs × {set.reps} reps
-                      {" "}
-                      ({formatTime(set.duration)})
+                <ThemedText>
+                  Resistance: {exercise.resistance ?? 0}
+                </ThemedText>
 
-                    </ThemedText>
 
-                  ))}
+                <ThemedText>
+                  Incline: {exercise.incline ?? 0}
+                </ThemedText>
+
+
+                <ThemedText>
+                  Session Time: {formatTime(exercise.totalDuration)}
+                </ThemedText>
+
+
+              </>
+
+            )}
 
 
 
@@ -545,7 +745,15 @@ const trendPercent =
                       ? "Rep Progress"
                       : metric === "volume"
                       ? "Volume Progress"
-                      : "Estimated 1RM Progress"
+                      : metric === "strength"
+                      ? "Estimated 1RM Progress"
+                      : metric === "time"
+                      ? "Time Progress"
+                      : metric === "distance"
+                      ? "Distance Progress"
+                      : metric === "resistance"
+                      ? "Resistance Progress"
+                      : "Incline Progress"
                   }`
                 : "Strength Progress"}
             </ThemedText>
@@ -658,9 +866,26 @@ const trendPercent =
                 },
               ]}
               selectedValue={selectedExercise}
-              onValueChange={(value)=>
-                setSelectedExercise(value)
+              onValueChange={(value)=>{
+
+              setSelectedExercise(value);
+
+              const exercise =
+                filteredWorkouts
+                  .flatMap(workout => workout.exercises)
+                  .find(
+                    item =>
+                      item.exerciseName === value
+                  );
+
+
+              if(exercise?.type === "strength"){
+                setMetric("weight");
+              } else {
+                setMetric("time");
               }
+
+            }}
             >
 
               {filteredExerciseNames.map(name => (
@@ -708,25 +933,60 @@ const trendPercent =
               }
             >
 
-              <Picker.Item
-                label="Weight"
-                value="weight"
-              />
+              {selectedExerciseIsCardio ? (
 
-              <Picker.Item
-                label="Reps"
-                value="reps"
-              />
+                <>
 
-              <Picker.Item
-                label="Volume"
-                value="volume"
-              />
+                  <Picker.Item
+                    label="Time"
+                    value="time"
+                  />
 
-              <Picker.Item
-                label="Estimated 1RM"
-                value="strength"
-              />
+                  <Picker.Item
+                    label="Distance"
+                    value="distance"
+                  />
+
+                  <Picker.Item
+                    label="Resistance"
+                    value="resistance"
+                  />
+
+                  <Picker.Item
+                    label="Incline"
+                    value="incline"
+                  />
+
+                </>
+
+
+              ) : (
+
+                <>
+
+                  <Picker.Item
+                    label="Weight"
+                    value="weight"
+                  />
+
+                  <Picker.Item
+                    label="Reps"
+                    value="reps"
+                  />
+
+                  <Picker.Item
+                    label="Volume"
+                    value="volume"
+                  />
+
+                  <Picker.Item
+                    label="Estimated 1RM"
+                    value="strength"
+                  />
+
+                </>
+
+              )}
 
             </Picker>
 
@@ -752,17 +1012,91 @@ const trendPercent =
                       Sessions: {sessionCount}
                     </ThemedText>
 
-                    <ThemedText>
-                      Top Weight: {bestWeight} lbs
-                    </ThemedText>
 
-                    <ThemedText>
-                      Estimated 1RM: {Math.round(bestEpley1RM)} lbs
-                    </ThemedText>
+                    {selectedExerciseIsCardio ? (
 
-                    <ThemedText>
-                      Total Volume: {Math.round(totalVolume).toLocaleString()} lb-reps
-                    </ThemedText>
+                      <>
+
+                        <ThemedText>
+                          Best Distance: {
+                            Math.max(
+                              ...exerciseStats.map(
+                                item =>
+                                  item.exercise.miles ?? 0
+                              )
+                            )
+                          } miles
+                        </ThemedText>
+
+
+                        <ThemedText>
+                          Longest Session: {
+                            Math.max(
+                              ...exerciseStats.map(
+                                item =>
+                                  item.exercise.time ?? 0
+                              )
+                            )
+                          } minutes
+                        </ThemedText>
+
+
+                      </>
+
+                    ) : (
+
+                      <>
+
+                        {exerciseStats[0]?.exercise.type === "strength" ? (
+
+                            <>
+                              <ThemedText>
+                                Top Weight: {bestWeight} lbs
+                              </ThemedText>
+
+                              <ThemedText>
+                                Estimated 1RM: {Math.round(bestEpley1RM)} lbs
+                              </ThemedText>
+
+                              <ThemedText>
+                                Total Volume: {Math.round(totalVolume).toLocaleString()} lb-reps
+                              </ThemedText>
+                            </>
+
+                          ) : (
+
+                            <>
+                              <ThemedText>
+                                Sessions: {sessionCount}
+                              </ThemedText>
+
+                              <ThemedText>
+                                Total Time: {
+                                  exerciseStats.reduce(
+                                    (total, workout) =>
+                                      total + (workout.exercise.totalDuration ?? 0),
+                                    0
+                                  ) / 60
+                                } minutes
+                              </ThemedText>
+
+                              <ThemedText>
+                                Total Distance: {
+                                  exerciseStats.reduce(
+                                    (total, workout) =>
+                                      total + (workout.exercise.miles ?? 0),
+                                    0
+                                  )
+                                } miles
+                              </ThemedText>
+                            </>
+
+                          )}
+
+                      </>
+
+                    )}
+
 
                     <ThemedText>
                       Last Trained: {lastTrained}
@@ -820,6 +1154,14 @@ const trendPercent =
                           ? " reps"
                           : metric === "volume"
                           ? " lb-reps"
+                          : metric === "distance"
+                          ? " mi"
+                          : metric === "time"
+                          ? " min"
+                          : metric === "resistance"
+                          ? ""
+                          : metric === "incline"
+                          ? ""
                           : " lbs"
                       }
 
@@ -898,6 +1240,21 @@ const styles = StyleSheet.create({
   title:{
   fontSize:28,
   lineHeight:36,
+  marginBottom:20,
+},
+
+cardHeader:{
+  flexDirection:"row",
+  justifyContent:"space-between",
+  alignItems:"center",
+},
+
+
+deleteAllButton:{
+  padding:10,
+  borderRadius:10,
+  backgroundColor:"#d9534f",
+  alignItems:"center",
   marginBottom:20,
 },
 

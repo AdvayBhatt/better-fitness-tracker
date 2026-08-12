@@ -6,18 +6,24 @@ export type CompletedExercise = {
 
   type:"strength" | "cardio";
 
+
   totalDuration:number;
+
+
+  time?:number;
+
+  miles?:number;
+
+  resistance?:number;
+
+  incline?:number;
+
 
   sets:{
     weight:number;
     reps:number;
     duration:number;
   }[];
-
-  time?:number;
-  miles?:number;
-  resistance?:number;
-  incline?:number;
 
 };
 

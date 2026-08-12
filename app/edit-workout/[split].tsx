@@ -142,8 +142,12 @@ export default function EditSplit() {
 
 
 
-    setExercises(updatedExercises);
+  setExercises(updatedExercises);
 
+  updateWorkout({
+    ...currentWorkout,
+    exercises: updatedExercises,
+  });
 
 
     setSelectedExercise("");
@@ -157,14 +161,20 @@ export default function EditSplit() {
   function removeExercise(index:number){
 
     const updatedExercises =
-      exercises.filter(
-        (_,i)=>i !== index
-      );
+        exercises.filter(
+          (_,i)=>i !== index
+        );
 
 
     setExercises(updatedExercises);
 
-  }
+
+    updateWorkout({
+      ...currentWorkout,
+      exercises: updatedExercises,
+    });
+
+    }
 
 
 
